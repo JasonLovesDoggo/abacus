@@ -1,5 +1,16 @@
-# This is just an example to get you started. A typical binary package
-# uses this file as the main entry point of the application.
+# example.nim
+import htmlgen
+import jester
+import markdown
 
-when isMainModule:
-  echo("Hello, World!")
+const docs = markdown(readFile("docs/ROUTES.md"))
+
+routes:
+  get "":
+    resp docs, "text/html"
+
+
+
+#
+# error Http404:
+#     resp "not found"
