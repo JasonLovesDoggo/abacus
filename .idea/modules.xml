@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/abacus.iml" filepath="$PROJECT_DIR$/.idea/abacus.iml" />
+      <module fileurl="file://$USER_HOME$/nimcache/.idea/nimcache.iml" filepath="$USER_HOME$/nimcache/.idea/nimcache.iml" />
     </modules>
   </component>
 </project>

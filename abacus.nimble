@@ -12,3 +12,5 @@ bin           = @["abacus"]
 
 requires "nim >= 2.0.2"
 requires "jester ~= 0.6.0"
+requires "redis >= 0.4.0"
+

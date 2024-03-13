@@ -12,7 +12,11 @@
 Abacus is a simple counting API written in Nim. It is a simple REST API that allows you to create, read, update and delete counts. It is a simple project that I created to learn Nim and to get a feel for the language.
 I currently use it on my personal website to keep track of the number of visitors.
 
+ 
 
+# Todos
+
+- [ ] use md2html instead of redirect
 
 
 
