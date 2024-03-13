@@ -1,5 +1,5 @@
 
-# /hit/<namespace>/<key>
+# /hit/{namespace}/{key}
 
 #### Function:
 This route is used to increment and fetch the value of a key in a namespace.
@@ -12,7 +12,7 @@ This route is used to increment and fetch the value of a key in a namespace.
   - **Example**: `GET /hit/visitors/total` returns `1000`. and would increment the key by 1.
 
 
-# /get/<namespace>/<key> 
+# /get/{namespace}/{key} 
                                     
 #### Function:
 This route is used to fetch the value of a key in a namespace without incrementing.

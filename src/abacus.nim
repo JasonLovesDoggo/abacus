@@ -1,13 +1,12 @@
 # example.nim
 import htmlgen
 import jester
-import markdown
 
-const docs = markdown(readFile("docs/ROUTES.md"))
+const docs_url: string = "https://github.com/JasonLovesDoggo/abacus/blob/master/docs/ROUTES.md"
 
 routes:
   get "":
-    resp docs, "text/html"
+    redirect docs_url
 
 
 
