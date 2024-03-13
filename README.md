@@ -1,5 +1,11 @@
 # Abacus - A simple counting API written in Nim 
                                                                
+          
+# Installation
+1. Install Nim & Redis
+2. Run `nimble install` to install the dependencies
+3. Run `nim c -r --verbosity:0 src/abacus.nim` to build and run the API locally.
+4. The API will be running on `http://localhost:5000` by default.
 
 
 ## Introduction
