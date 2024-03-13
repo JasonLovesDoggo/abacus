@@ -1,4 +1,3 @@
-# example.nim
 import htmlgen
 import jester
 
