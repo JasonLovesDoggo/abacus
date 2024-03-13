@@ -1,1 +1,1 @@
-# Abacus - A simple counting tool written in Nim 
+# Abacus - A simple counting API written in Nim 
