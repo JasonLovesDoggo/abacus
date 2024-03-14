@@ -7,8 +7,9 @@ const urlPatterns* = @[
   # pattern("/retrieve/{namespace}/{key}", retrieveView),
   # pattern("/create/{namespace}/{key}", createView),
   # pattern("/delete/{namespace}/{key}", deleteView),
-  # pattern("/resrt/{namespace}/{key}", resetView),
+  # pattern("/reset/{namespace}/{key}", resetView),
   # pattern("/keys/{namespace}", keysView),
+  # pattern("/stats", statsView),
 ]
 
 
