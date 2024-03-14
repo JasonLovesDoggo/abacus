@@ -1,7 +1,5 @@
 import redis, asyncdispatch
 
-
-
 proc get*(key: string, incr: bool): Future[string] {.async.} =
   result = await redis.get(await openAsync(host="localhost"), key)
   if incr:

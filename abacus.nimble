@@ -11,6 +11,6 @@ bin           = @["abacus"]
 # Dependencies
 
 requires "nim >= 2.0.2"
-requires "jester ~= 0.6.0"
+requires "prologue ~= 0.6.4"
 requires "redis >= 0.4.0"
 
