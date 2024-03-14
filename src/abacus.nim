@@ -1,7 +1,5 @@
-import json
 import prologue
 import prologue/middlewares/utils
-import prologue/middlewares/staticfile
 from prologue/openapi import serveDocs
 import ./urls
 from ./views import docsView
