@@ -1,5 +1,3 @@
-type KeyNotFound = object of CatchableError
-type KeyAlreadyExists = object of CatchableError
-type KeyNotUnique = object of CatchableError
-
-export KeyNotFound, KeyAlreadyExists, KeyNotUnique
+type KeyNotFound* = object of CatchableError
+type KeyNotUnique* = object of CatchableError
+type ConnectionError* = object of CatchableError

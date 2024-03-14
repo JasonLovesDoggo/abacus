@@ -1,21 +1,28 @@
-import redis, asyncdispatch
+import redis
+from ./exceptions import ConnectionError, KeyNotUnique
+from ./config import DEFAULT_KEY_LIFE
+import ./types
+import asyncdispatch
 
-proc get*(key: string, incr: bool): Future[string] {.async.} =
-  result = await redis.get(await openAsync(host="localhost"), key)
+proc create(session: Redis, key: string): RedisString =
+  if session.exists(key):
+    raise newException(KeyNotUnique, "Key already exists")
+  return session.setEX(key, DEFAULT_KEY_LIFE, "0")
+
+proc get*(session: Redis, key: string, incr: bool): RedisString =
+
+  result = session.get(key)
+  if result == redisNil:
+    result = create(session, key)
   if incr:
-    discard await redis.incr(await openAsync(host="localhost"), key)
+    discard session.incr(key)
 
 
-proc main() {.async.} =
-  let redisClient = await openAsync(host="localhost")
+proc stats*(session: Redis): StatsObj =
+  let keyCount: RedisInteger = session.dbsize()
+  let lastSave: RedisInteger = session.lastsave()
 
-  ## Set the key `nim_redis:test` to the value `Hello, World`
-  await redisClient.setk("nim_redis:test", "Hello, World")
+  echo "Key count: ", keyCount
+  echo "Last save: ", lastSave
 
-  ## Get the value of the key `nim_redis:test`
-  let value = await redisClient.get("nim_redis:test")
-
-  assert(value == "Hello, World")
-
-waitFor main()
-
+  return StatsObj(key_count: keyCount, last_save: lastSave)
