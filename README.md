@@ -30,5 +30,5 @@ I currently use it on my personal website to keep track of the number of visitor
 - [ ] SSE Stream for the counters? Low priority.
 - [ ] Tests
 - [ ] Rate limiting (max 30 requests per second per IP address)
-- [ ] Create Python & JS Wrappers
+- [ ] Create [Python](https://github.com/BenJetson/py-countapi) & [JS Wrappers](https://github.com/mlomb/countapi-js)
 
