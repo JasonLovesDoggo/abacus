@@ -1,0 +1,585 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <title>CountAPI - Free counting API</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="canonical" href="https://countapi.xyz">
+    <meta name="description"
+          content="CountAPI is a free counting service. You can use it to track page hits, and specific events among other things.">
+    <meta name="keywords"
+          content="countapi, counting, count, api, key-value store, free api, visitor count, hit counter, page counter, visitors">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CountAPI">
+    <meta property="og:title" content="CountAPI">
+    <meta property="og:description"
+          content="CountAPI is a free counting service. You can use it to track page hits, and specific events among other things.">
+    <meta property="og:url" content="https://countapi.xyz">
+    <meta property="og:image" content="logo.png">
+    <meta property="og:image:width" content="64">
+    <meta property="og:image:height" content="64">
+    <link rel="stylesheet" type="text/css"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"/>
+    <style>
+        @import url("https://fonts.googleapis.com/css?family=Open+Sans:400,700");
+
+        * {
+            margin: 0;
+            padding: 0;
+            outline: none;
+            box-sizing: border-box;
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            color: #606c71;
+        }
+
+        a {
+            text-decoration: none;
+            color: #0077cc;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        .header {
+            padding: 3rem 4rem;
+            color: white;
+            text-align: center;
+            background-color: #7e1fa0;
+            background-image: linear-gradient(22deg, #7e1fa0, #155899);
+            box-shadow: inset 0 -2px 2px -2px rgba(0, 0, 0, 0.8);
+        }
+
+        .header .title {
+            text-shadow: 1px 1px 5px black;
+        }
+
+        .header .legend {
+            font-size: 1.15rem;
+            font-weight: normal;
+            margin-top: 0.4rem;
+            opacity: 0.7;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: auto;
+            padding: 2rem 4rem;
+            font-size: 1.1rem;
+            word-wrap: break-word;
+        }
+
+        .container h1,
+        .container h2,
+        .container h3,
+        .container h4,
+        .container h5,
+        .container h6 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: normal;
+            color: #0c57c3;
+        }
+
+        .container h1 {
+            border-bottom: 1px solid rgba(201, 201, 201, 0.33);
+        }
+
+        .container p {
+            margin-bottom: 1em;
+        }
+
+        .container ul {
+            margin-top: 0;
+            padding: 0.3rem 2.2rem;
+        }
+
+        .container code {
+            padding: 2px 4px;
+            background-color: #efefef;
+            border-radius: 4px;
+        }
+
+        .container pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            padding: 10px 10px 10px 20px;
+            border-radius: 0 5px 5px 0;
+            font-size: 15px;
+            border-left: 8px solid #ffffff;
+            color: #707070;
+            margin-bottom: 1em;
+        }
+
+        .container pre.info {
+            border-color: #5087af;
+            background-color: #f3f7f8;
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        .container pre.success {
+            border-color: #50af51;
+            background-color: #f3f8f3;
+        }
+
+        .container pre.fail {
+            border-color: #af5050;
+            background-color: #f8f3f3;
+        }
+
+        .container pre, .container pre a, .container .endpoint {
+            font-family: Monaco, "Lucida Console", monospace;
+        }
+
+        .container table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            margin-bottom: 1em;
+        }
+
+        .container table th, .container table td {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e9ebec;
+            min-width: 140px;
+        }
+
+        .container .highlight {
+            white-space: pre;
+            font-family: monospace;
+            font-size: 16px;
+            border-radius: 2px;
+            margin-bottom: 1em;
+        }
+
+        .container .highlight code {
+            background-color: rgba(239, 239, 239, 0.1);
+        }
+
+        .container .highlight * {
+            font-family: monospace;
+        }
+
+        footer {
+            padding-top: 1rem;
+            margin-top: 2rem;
+            border-top: solid 1px #eff0f1;
+        }
+
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 2rem 2rem;
+            }
+        }
+    </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-98HKBC9VCP"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
+        gtag('js', new Date());
+
+        gtag('config', 'G-98HKBC9VCP');
+    </script>
+</head>
+<body>
+<header class="header">
+    <img src="logo.png">
+    <h1 class="title">Abacus</h1>
+    <h2 class="legend">Counting should be easy, right?</h2>
+</header>
+<section class="container">
+    <h1 id="countapi">Abacus</h1>
+    <p>
+        This API allows you to create simple numeric counters. IaaS, Integer as a Service.
+    </p>
+
+    <p style="margin-bottom: 2px">It goes down to:</p>
+    <ul>
+        <li>Create a counter and restrict its operations</li>
+        <li>Reset the value of a counter</li>
+        <li>Increment/decrement a counter</li>
+    </ul>
+    <p>All counters are accessible if you know the key and there are not private counters (yet?).</p>
+
+    <p>
+        Want to track the number of hits a page had? Sure.<br>
+        Want to know the number of users that clicked on the button "Feed Cow"? There you go.
+    </p>
+
+    <p>
+        So far, <code data-stat-id="keys_created">...</code> keys have been created and there have been <code
+            data-stat-id="requests">...</code> requests served being <code data-stat-id="keys_updated">...</code> key
+        updates.<br>
+        This page has been visited <code id="visits">...</code> times.
+    </p>
+    <h1 id="tldr">TL;DR</h1>
+    <p>
+        Each counter is identified inside a <b>namespace</b> with a <b>key</b>.<br>
+        The namespace should be unique, so its recommend using your site's domain.<br>
+        Inside each namespace you can generate all the counters you may need.
+    </p>
+    <p>The <b>hit</b> endpoint provides increment by one counters directly. Each time its requested the counter will
+        increase by one:</p>
+    <pre class="success" style="font-size: 18px">
+<a href="https://abacus.jasoncameron.dev/hit/namespace/key" target="_blank">https://abacus.jasoncameron.dev/hit/<code>namespace</code>/<code>key</code></a>
+⇒ 200 { "value": 1234 }</pre>
+    <p>Want to start counting right away? Check the examples below!</p>
+    <h1 id="example">Example</h1>
+    <p>Lets say you want to display the number of page views a site received.</p>
+    <div class="highlight html">&lt;div id="visits"&gt;...&lt;/div&gt;</div>
+    <pre class="info">Remember to change <input type="text" id="domain" value="mysite.com" maxlength="64"
+                                                autocomplete="off" autocorrect="off" autocapitalize="off"
+                                                spellcheck="false"> with your site's <b>domain</b>.</pre>
+<!--    <h4>Using <a href="https://www.npmjs.com/package/countapi-js" target="_blank">countapi-js <img alt="npm"-->
+<!--                                                                                                   src="https://img.shields.io/npm/v/countapi-js"></a>-->
+<!--    </h4>-->
+<!--    <div class="highlight js">import countapi from 'countapi-js';-->
+
+<!--        countapi.visits().then((result) => {-->
+<!--        console.log(result.value);-->
+<!--        });-->
+<!--    </div>-->
+    <h4>Using JSONP</h4>
+    <div class="highlight html">&lt;script&gt;
+        function cb(response) {
+        document.getElementById('visits').innerText = response.value;
+        }
+        &lt;/script&gt;
+        &lt;script async src="https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits?callback=cb"&gt;&lt;/script&gt;
+    </div>
+    <h4>Using XHR</h4>
+    <div class="highlight js">var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
+        xhr.responseType = "json";
+        xhr.onload = function() {
+        document.getElementById('visits').innerText = this.response.value;
+        }
+        xhr.send();
+    </div>
+    <h4>Using jQuery</h4>
+    <div class="highlight js">$.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
+        function(response) {
+        $("#visits").text(response.value);
+        });
+    </div>
+    <h3>Multiple pages</h3>
+    <p>If you want to have a counter for each individual page you can replace <code>visits</code> with a unique
+        identifier for each page, i.e. <code>index</code>, <code>contact</code>, <code>item-1234</code>. Check <a
+                href="#format">the right format</a> a key must have.</p>
+    <p>Alternatively, you can use some reserved words that are replaced server-side.<br>For example, if a request is
+        made from <code>https://mysite.com/example/page</code>:</p>
+    <ul>
+        <li><code>:HOST:</code> will be replaced with <code>mysite.com</code></li>
+        <li><code>:PATHNAME:</code> will be replaced with <code>examplepage</code></li>
+    </ul>
+    <br>
+    <pre class="info">Note: Reserved words are padded with dots if their length is less than three.</pre>
+    <p>So you could use something like:</p>
+    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATHNAME:</a></pre>
+    <p>Or even more generic (though not recommended):</p>
+    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:</a></pre>
+    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>
+    <h3>Counting events</h3>
+    <p>You can use the API to count any kind of stuff, lets say:</p>
+    <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
+        &lt;script&gt;
+        function clicked() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
+        xhr.responseType = "json";
+        xhr.onload = function() {
+        alert(`This button has been clicked ${this.response.value} times!`);
+        }
+        xhr.send();
+        }
+        &lt;/script&gt;
+    </div>
+    <button onclick="clicked()">Press Me!</button>
+    <script>
+        function clicked() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://abacus.jasoncameron.dev/hit/mysite.com/awesomeclick");
+            xhr.responseType = "json";
+            xhr.onload = function () {
+                alert(`This button has been clicked ${this.response.value} times!`);
+            }
+            xhr.send();
+        }
+    </script>
+<!--    <h1 id="libraries">Libraries</h1>-->
+<!--    The official javascript promise based wrapper is available in <a href="https://www.npmjs.com/package/countapi-js"-->
+<!--                                                                     target="_blank">countapi-js <img alt="npm"-->
+<!--                                                                                                      src="https://img.shields.io/npm/v/countapi-js"></a>.-->
+<!--    <h1 id="roadmap">Roadmap</h1>-->
+    <p>If this API starts getting some traction, I have some ideas in mind:</p>
+    <ul>
+        <li>Being able to open a <a
+                href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Receiving_events_from_the_server"
+                target="_blank">SSE stream</a> and receive updates in real time avoiding polling
+        </li>
+        <li>Enable batch creating/updating</li>
+        <li>Unique counting?</li>
+        <li>Float numbers?</li>
+        <li>Generate a secret key to update/reset keys</li>
+    </ul>
+    <h1 id="faq">FAQ</h1>
+    <h2>Where is the API documentation?</h2>
+    <p><a href="#api">Scroll</a> a bit further.</p>
+    <h2>Is the API free?</h2>
+    <p>Completely free.</p>
+    <h2>Rate Limiting?</h2>
+    <p>Key retrieving and updating has <b>no</b> limits whatsoever. Key <b>creation</b> is limited to 20/IP/s.</p>
+    <h2>Can I delete a key?</h2>
+    <p>You can't, just let the key expire.<br>If you created a key with a wrong configuration, you can always create
+        another key.</p>
+    <h2>Will I blow up the CountAPI server?</h2>
+    <p>CountAPI is using <a href="https://redis.io/" target="_blank">Redis</a> as a database, a rapid key-value
+        solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you ping me
+        letting me know.</p>
+    <h2 id="contact">Issues/Contact</h2>
+    <p>If you have issues, suggestions or just want to contact me <a href="mailto:abacus@jasoncameron.dev" target="_blank">email me</a>.</p>
+    <h1 id="api">API</h1>
+    <h2>Namespaces</h2>
+    <p>Namespaces are meant to avoid name collisions. You may specify a namespace during the creation of a key. It's
+        recommended to use the domain of the application as namespace to avoid collision with other websites.<br>If the
+        namespace is not specified the key is assigned to the <code>default</code> namespace. If your key resides in the
+        default namespace, you don't need to specify it.</p>
+    <h2>Endpoints</h2>
+    <p>
+        All requests support <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">cross-origin
+        resource sharing</a> (CORS) and SSL.<br>
+        You can use <a href="https://en.wikipedia.org/wiki/JSONP">JSONP</a> sending the callback parameter. JSONP
+        requests will never fail, they will include the HTTP code in the response.<br>
+        Also a 1x1 GIF image is supported sending <code>?img</code>.
+    </p>
+    <p>Base API path: <a href="https://abacus.jasoncameron.dev" target="_blank">https://abacus.jasoncameron.dev</a></p>
+    <p>In the case of a server failure, the API will send:</p>
+    <pre class="fail">⇒ 500 { "error": "Error description" }</pre>
+    <h3 class="endpoint">/get/:namespace?/:key</h3>
+    <p>Get the value of a key. Optionally specify the namespace.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/get/test" target="_blank">https://abacus.jasoncameron.dev/get/test</a>
+⇒ 200 { "value": 42 }
+
+<a href="https://abacus.jasoncameron.dev/get/mysite.com/test" target="_blank">https://abacus.jasoncameron.dev/get/mysite.com/test</a>
+⇒ 200 { "value": 24 }</pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/get/nonexisting" target="_blank">https://abacus.jasoncameron.dev/get/nonexisting</a>
+⇒ 404 { "value": null }</pre>
+    <h3 class="endpoint">/set/:namespace?/:key?value=:value</h3>
+    <p>Set the value of a key. Optionally specify the namespace. The key <b>must</b> be created with
+        <code>enable_reset</code> set to <code>1</code> (true).</p>
+    <p>This endpoint will return the previous value before the assignation.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/set/test?value=69" target="_blank">https://abacus.jasoncameron.dev/set/test?value=69</a>
+⇒ 200 { "old_value": 42, "value": 69 }
+
+<a href="https://abacus.jasoncameron.dev/set/mysite.com/test?value=96" target="_blank">https://abacus.jasoncameron.dev/set/mysite.com/test?value=96</a>
+⇒ 200 { "old_value": 24, "value": 96 }</pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/set/resetdisabled?value=33" target="_blank">https://abacus.jasoncameron.dev/set/resetdisabled?value=33</a>
+⇒ 403 { "old_value": 1234, "value": 1234 }
+
+<a href="https://abacus.jasoncameron.dev/set/nonexisting?value=33" target="_blank">https://abacus.jasoncameron.dev/set/nonexisting?value=33</a>
+⇒ 404 { "old_value": null, "value": null }</pre>
+    <h3 class="endpoint">/update/:namespace?/:key?amount=:amount</h3>
+    <p>Updates a key with <code>+/- amount</code>. Optionally specify the namespace. The <code>amount</code> <b>must</b>
+        be within <code>update_lowerbound</code> and <code>update_upperbound</code> specified during the creation of the
+        key.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/update/test?amount=5"
+   target="_blank">https://abacus.jasoncameron.dev/update/test?amount=5</a> (value was 42)
+⇒ 200 { "value": 47 }
+
+<a href="https://abacus.jasoncameron.dev/update/mysite.com/test?amount=-7" target="_blank">https://abacus.jasoncameron.dev/update/mysite.com/test?amount=-7</a> (value was 53)
+⇒ 200 { "value": 46 }</pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/update/outofrange?amount=3" target="_blank">https://abacus.jasoncameron.dev/update/outofrange?amount=3</a> (value was 47, update_upperbound=2)
+⇒ 403 { "value": 47 }
+
+<a href="https://abacus.jasoncameron.dev/update/nonexisting?amount=1" target="_blank">https://abacus.jasoncameron.dev/update/nonexisting?amount=1</a>
+⇒ 404 { "value": null }</pre>
+    <h3 class="endpoint">/hit/:namespace?/:key</h3>
+    <p>An easier way to track incrementing by one keys. This endpoint will create a key if it doesn't exists and
+        increment it by one on each subsequent request. Optionally specify a namespace.<br>The key created has the
+        following properties:</p>
+    <ul>
+        <li><code>enable_reset</code> to <code>0</code> (false)</li>
+        <li><code>update_lowerbound</code> to <code>0</code></li>
+        <li><code>update_upperbound</code> to <code>1</code></li>
+    </ul>
+    <p>Effectively making the key only incrementable by one.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits"
+   target="_blank">https://abacus.jasoncameron.dev/hit/mysite.com/visits</a> (value was 35)
+⇒ 200 { "value": 36 }
+
+<a href="https://abacus.jasoncameron.dev/hit/nonexisting" target="_blank">https://abacus.jasoncameron.dev/hit/nonexisting</a> (key is created)
+⇒ 200 { "value": 1 }</pre>
+    <h3 class="endpoint">/create</h3>
+    <p>Creates a key.<br>All parameters are optional</p>
+    <table>
+        <thead>
+        <tr>
+            <th>name</th>
+            <th>default</th>
+            <th>description</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>key</td>
+            <td>New UUID</td>
+            <td>Name of the key</td>
+        </tr>
+        <tr>
+            <td>namespace</td>
+            <td>default</td>
+            <td>Namespace to store the key</td>
+        </tr>
+        <tr>
+            <td>value</td>
+            <td>0</td>
+            <td>The initial value stored</td>
+        </tr>
+        <tr>
+            <td>enable_reset</td>
+            <td>0</td>
+            <td>Allows the key to be resetted with <b>/set</b></td>
+        </tr>
+        <tr>
+            <td>update_lowerbound</td>
+            <td>-1</td>
+            <td>Restrict update to not subtract more than this number. This number <b>must</b> be negative or zero.</td>
+        </tr>
+        <tr>
+            <td>update_upperbound</td>
+            <td>1</td>
+            <td>Restrict update to not add more than this number. This number <b>must</b> be positive or zero.</td>
+        </tr>
+        </tbody>
+    </table>
+    <pre class="info">Note about <b>expiration</b>: Every time a key is updated its expiration is set to <b>6 months</b>. So don't worry, if you still using it, it won't expire.</pre>
+    <pre class="info" id="format">Keys and namespaces must have at least 3 characters and less or equal to 64. Keys and namespaces must match: <b>^[A-Za-z0-9_\-.]{3,64}$</b></pre>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/create" target="_blank">https://abacus.jasoncameron.dev/create</a>
+⇒ 200 {"namespace":"default", "key":"6d5891ff-ebda-48fb-a760-8549d6a3bf3a", "value":0}
+
+<a href="https://abacus.jasoncameron.dev/create?namespace=mysite.com&value=42" target="_blank">https://abacus.jasoncameron.dev/create?namespace=mysite.com&value=42</a>
+⇒ 200 {"namespace":"mysite.com", "key":"33606dbe-4800-4228-b042-5c0fb8ec8f08", "value":42}
+
+<a href="https://abacus.jasoncameron.dev/create?key=counter&expiration=60" target="_blank">https://abacus.jasoncameron.dev/create?key=counter&expiration=60</a>
+⇒ 200 { "namespace": "default", "key":"counter", "value": 0 }</pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/create?name=alreadycreated" target="_blank">https://abacus.jasoncameron.dev/create?name=alreadycreated</a> (the key already existed)
+⇒ 409 { "namespace": null, "key": null, "value": null }</pre>
+    <h3 class="endpoint">/info/:namespace?/:key</h3>
+    <p>Get information about a key. Optionally specify the namespace.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/info/test" target="_blank">https://abacus.jasoncameron.dev/info/test</a>
+⇒ 200 {
+    "namespace": "default",
+    "key": "test",
+    "ttl": 321,
+    "value": 42,
+    "enable_reset": false,
+    "update_upperbound": 1,
+    "update_lowerbound": 1
+}</pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/info/nonexisting" target="_blank">https://abacus.jasoncameron.dev/info/nonexisting</a>
+⇒ 404 {
+    "namespace": null,
+    "key": null,
+    "ttl": null,
+    "value": null,
+    "enable_reset": null,
+    "update_upperbound": null,
+    "update_lowerbound": null
+}</pre>
+    <h3 class="endpoint">/stats</h3>
+    <p>Get some CountAPI stats</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/stats" target="_blank">https://abacus.jasoncameron.dev/stats</a>
+⇒ 200 {
+    "keys_created": <span data-stat-id="keys_created">...</span>,
+    "keys_updated": <span data-stat-id="keys_updated">...</span>,
+    "requests": <span data-stat-id="requests">...</span>,
+    "version": "<span data-stat-id="version">...</span>"
+}</pre>
+    <footer>
+        made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
+                href="https://countapi.xyz">CountAPI</a>.
+    </footer>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        function request(url, callback) {
+            var req = new XMLHttpRequest();
+            req.open("GET", url);
+            req.responseType = 'json';
+            req.onload = function () {
+                if (this.status === 200 && typeof this.response === 'object')
+                    callback(this.response);
+                else
+                    callback(null);
+            }
+            req.send();
+        }
+
+        function stats() {
+            request("https://abacus.jasoncameron.dev/stats", function (obj) {
+                if (obj) {
+                    for (var key in obj) {
+                        var els = document.querySelectorAll(`*[data-stat-id="${key}"]`);
+                        var str = obj[key].toLocaleString();
+                        for (var i in els)
+                            els[i].innerText = str;
+                    }
+                }
+                setTimeout(stats, 10000);
+            });
+        }
+
+        stats();
+        request("https://abacus.jasoncameron.dev/hit/abacus/visits", function (obj) {
+            if (obj) {
+                document.getElementById('visits').innerText = obj.value.toLocaleString();
+            }
+        });
+
+        function updateDomain(domain) {
+            document.querySelectorAll('.mysite').forEach(function (e) {
+                e.innerText = domain;
+            });
+        }
+
+        hljs.configure({tabReplace: '    '});
+        document.addEventListener('DOMContentLoaded', function (event) {
+            updateDomain("mysite.com");
+            document.getElementById('domain').addEventListener('input', function (e) {
+                e.target.value = e.target.value.replace('https://', '').replace('http://', '').replace(/[^A-Za-z0-9_\-.]/g, '');
+                updateDomain(e.target.value);
+            });
+            document.querySelectorAll('div.highlight').forEach(function (block) {
+                hljs.highlightBlock(block);
+            });
+        });
+    </script>
+</section>
+</body>
+</html>
