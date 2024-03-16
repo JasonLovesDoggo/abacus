@@ -1,6 +1,12 @@
 
 # /hit/{namespace}/{key}
 
+note: /hit/{namespace}/{key} is the same as /hit/{namespace}/{key}/
+
+Start with any combination of uppercase letters, lowercase letters, digits, underscores, hyphens, or periods.
+Are between 3 and 64 characters long.
+End after meeting the specified length and character requirements.
+
 #### Function:
 This route is used to increment and fetch the value of a key in a namespace.
 
