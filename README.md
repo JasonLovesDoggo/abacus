@@ -1,29 +1,34 @@
-# Abacus - A simple counting API written in Nim 
+# Abacus - A simple counting API written in Golang 
                                                                
-          
-# Installation
-1. Install Nim & Redis
-2. Run `nimble install` to install the dependencies
-3. Run `nim c -r --verbosity:0 src/abacus.nim` to build and run the API locally.
-4. The API will be running on `http://localhost:5000` by default.
+[//]: # (          )
+[//]: # (# Installation)
+
+[//]: # (1. Install Nim & Redis)
+
+[//]: # (2. Run `nimble install` to install the dependencies)
+
+[//]: # (3. Run `nim c -r --verbosity:0 src/abacus.nim` to build and run the API locally.)
+
+[//]: # (4. The API will be running on `http://localhost:5000` by default.)
 
 
 ## Introduction
-Abacus is a simple counting API written in Nim. It is a simple REST API that allows you to create, read, update and delete counts. It is a simple project that I created to learn Nim and to get a feel for the language.
+Abacus is a simple counting API written in Golang. It is a simple REST API that allows you to create, read, update and delete counts. It is a simple project that I created to learn ~~Nim~~ Go and to get a feel for the language.
 I currently use it on my personal website to keep track of the number of visitors.
 
  
 
 # Todos
 
-- [ ] use md2html instead of redirect
+- [ ] Documentation
+- [ ] K8 Deployment
+- [ ] impl /create endpoint which creates a new counter initialized to 0 and returns a secret key that can be used to modify the counter via the following endpoints
+  - [ ] /delete endpoint
+  - [ ] /set endpoint 
+  - [ ] /reset (alias to /set 0)
+  - [ ] /update endpoint (updates the counter x)
+- [ ] SSE Stream for the counters? Low priority.
+- [ ] Tests
+- [ ] Rate limiting (max 30 requests per second per IP address)
+- [ ] Create Python & JS Wrappers
 
-
-
-## Stack
-- **Nim** - The programming language used to write the API
-- **Jester** - The web framework used to create the REST API
-- **Redis** - The database used to store the counts
-- **Nim/Redis** - The Redis client used to interact with the Redis database
-- **Docker** - The containerization tool used to run the API
-- **Github Actions** - The CI/CD tool used to build and deploy the API
