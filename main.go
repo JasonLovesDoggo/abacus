@@ -34,5 +34,5 @@ func main() {
 	//r.GET("/info/:namespace", setData)
 
 	// Run the server
-	_ = r.Run(":8080")
+	_ = r.Run("0.0.0.0:8080")
 }
