@@ -5,4 +5,5 @@
 README.md
 docs
 tmp
+tests
 .env.example
