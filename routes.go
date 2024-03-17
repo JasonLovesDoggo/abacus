@@ -52,6 +52,17 @@ func HitView(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"value": val})
 }
 
+func CreateRandomView(c *gin.Context) {
+	key, _ := utils.GenerateRandomString(16)
+	namespace, err := utils.GenerateRandomString(16)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random string. Try again later."})
+		return
+	}
+
+	c.Params = gin.Params{gin.Param{Key: "namespace", Value: namespace}, gin.Param{Key: "key", Value: key}}
+	CreateView(c)
+}
 func CreateView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
@@ -78,7 +89,7 @@ func CreateView(c *gin.Context) {
 	}
 	AdminKey := uuid.New().String() // Create a new admin key used for deletion and control
 	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0)
-	c.JSON(http.StatusCreated, gin.H{"key": dbKey, "admin_key": AdminKey, "value": initialValue})
+	c.JSON(http.StatusCreated, gin.H{"key": key, "namespace": namespace, "admin_key": AdminKey, "value": initialValue})
 }
 
 func InfoView(c *gin.Context) { // todo: write docs on what negative values mean (https://redis.io/commands/ttl/)

@@ -45,6 +45,7 @@ func main() {
 	r.GET("/hit/:namespace/*key", HitView)
 	r.POST("/create/:namespace/*key", CreateView)
 	r.GET("/create/:namespace/*key", CreateView)
+	r.GET("/create/", CreateRandomView)
 	r.GET("/info/:namespace/*key", InfoView)
 	r.POST("/delete/:namespace/*key", DeleteView)
 

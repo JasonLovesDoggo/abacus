@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"regexp"
@@ -107,4 +109,20 @@ func LoadEnv() {
 			log.Fatalf("Error loading .env file")
 		}
 	}
+}
+
+func GenerateRandomString(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	charsetLen := big.NewInt(int64(len(charset)))
+
+	// Generate random indices and construct the string
+	result := make([]byte, length)
+	for i := range result {
+		randIndex, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
+			return "", err
+		}
+		result[i] = charset[randIndex.Int64()]
+	}
+	return string(result), nil
 }
