@@ -23,7 +23,7 @@ I currently use it on my personal website to keep track of the number of visitor
 - [ ] Documentation
 - [ ] K8 Deployment
 - [x] impl /create endpoint which creates a new counter initialized to 0 and returns a secret key that can be used to modify the counter via the following endpoints
-  - [ ] /delete endpoint
+  - [x] /delete endpoint
   - [ ] /set endpoint 
   - [ ] /reset (alias to /set 0)
   - [ ] /update endpoint (updates the counter x)
