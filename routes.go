@@ -38,9 +38,8 @@ func HitView(c *gin.Context) {
 		return
 	}
 	//fmt.Println("namespace:"+namespace, "key:"+key)
-	dbKey, err := utils.CreateKey(namespace, key, false)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
 	// Get data from Redis
@@ -58,9 +57,8 @@ func CreateView(c *gin.Context) {
 	if namespace == "" || key == "" {
 		return
 	}
-	dbKey, err := utils.CreateKey(namespace, key, false)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
 	initialValue, err := strconv.Atoi(c.DefaultQuery("initializer", "0"))
@@ -88,9 +86,8 @@ func InfoView(c *gin.Context) { // todo: write docs on what negative values mean
 	if namespace == "" || key == "" {
 		return
 	}
-	dbKey, err := utils.CreateKey(namespace, key, true)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	dbKey := utils.CreateKey(c, namespace, key, true)
+	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
 	dbValue := Client.Get(context.Background(), dbKey).Val()
@@ -116,9 +113,8 @@ func DeleteView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "token is required, please provide a token in the fmt of ?token=ADMIN_TOKEN"})
 		return
 	}
-	createKey, err := utils.CreateKey(namespace, key, true)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	createKey := utils.CreateKey(c, namespace, key, true)
+	if createKey == "" { // error is handled in CreateKey
 		return
 	}
 	adminDBKey := utils.CreateAdminKey(createKey)
