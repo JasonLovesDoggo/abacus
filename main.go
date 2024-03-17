@@ -37,7 +37,8 @@ func main() {
 
 	r.GET("/hit/:namespace/*key", HitView)
 	r.POST("/hit/:namespace/*key", HitView)
-	//r.GET("/get/:namespace/:key", getData)
+	r.POST("/create/:namespace/*key", CreateView)
+	r.GET("/get/:namespace/*key", CreateView)
 	//r.GET("/info/:namespace/:key", getData)
 	//r.GET("/info/:namespace", setData)
 

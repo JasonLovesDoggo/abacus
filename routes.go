@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
+
+	"github.com/google/uuid"
+
+	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/joho/godotenv"
 
@@ -57,16 +60,9 @@ func InfoView(c *gin.Context) {
 }
 
 func HitView(c *gin.Context) {
-	var namespace, key string
-	key = strings.Trim(c.Param("key"), "/")
-	if !(len(key) > 0) {
-		namespace = "default"
-		key = c.Param("namespace")
-	} else {
-		namespace = c.Param("namespace")
-	}
+	namespace, key := utils.GetNamespaceKey(c)
 	fmt.Println("namespace:"+namespace, "key:"+key)
-	dbKey, err := CreateKey(namespace, key, false)
+	dbKey, err := utils.CreateKey(namespace, key, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -79,4 +75,32 @@ func HitView(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"count": val})
+}
+
+func CreateView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	dbKey, err := utils.CreateKey(namespace, key, false)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	initialValue := c.DefaultQuery("initializer", "")
+	_, err = strconv.Atoi(initialValue)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "initializer must be a number"})
+		return
+	}
+	// Get data from Redis
+	created := Client.SetNX(context.Background(), dbKey, initialValue, 0)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
+		return
+	}
+	if created.Val() == false {
+		c.JSON(http.StatusConflict, gin.H{"error": "Key already exists, please use a different key."})
+		return
+	}
+	AdminKey := uuid.New().String() // Create a new admin key used for deletion and control
+	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0)
+	c.JSON(http.StatusCreated, gin.H{"key": dbKey, "admin_key": AdminKey, "value": initialValue})
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 func CreateKey(namespace, key string, skipValidation bool) (string, error) {
@@ -37,4 +39,22 @@ func validate(input string) error {
 		return fmt.Errorf("must match the pattern ^[A-Za-z0-9_\\-.]{3,64}$")
 	}
 	return nil
+}
+
+func GetNamespaceKey(c *gin.Context) (string, string) {
+	var namespace, key string
+	key = strings.Trim(c.Param("key"), "/")
+	if !(len(key) > 0) {
+		namespace = "default"
+		key = c.Param("namespace")
+	} else {
+		namespace = c.Param("namespace")
+	}
+	return namespace, key
+}
+
+func CreateAdminKey(key string) string {
+	// remove the K: prefix
+	key = strings.TrimPrefix(key, "K:")
+	return "A:" + key
 }
