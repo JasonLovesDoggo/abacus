@@ -31,28 +31,6 @@ func init() {
 	})
 }
 
-func InfoView(c *gin.Context) {
-	var namespace, key string
-	containsKey := c.Params.ByName("key")
-	if containsKey == "" {
-		namespace = "default"
-		key = c.Param("key")
-	} else {
-		namespace = c.Param("namespace")
-		key = c.Param("key")
-	}
-
-	dbKey := namespace + ":" + key
-	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"value": val})
-}
-
 func HitView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
@@ -84,8 +62,7 @@ func CreateView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	initialValue := c.DefaultQuery("initializer", "")
-	_, err = strconv.Atoi(initialValue)
+	initialValue, err := strconv.Atoi(c.DefaultQuery("initializer", "0"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "initializer must be a number"})
 		return
@@ -103,4 +80,27 @@ func CreateView(c *gin.Context) {
 	AdminKey := uuid.New().String() // Create a new admin key used for deletion and control
 	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0)
 	c.JSON(http.StatusCreated, gin.H{"key": dbKey, "admin_key": AdminKey, "value": initialValue})
+}
+
+func InfoView(c *gin.Context) { // todo: write docs on what negative values mean (https://redis.io/commands/ttl/)
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey, err := utils.CreateKey(namespace, key, true)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	dbValue := Client.Get(context.Background(), dbKey).Val()
+	count, _ := strconv.Atoi(dbValue)
+
+	isGenuine := Client.Exists(context.Background(), utils.CreateAdminKey(dbKey)).Val() == 0
+	fmt.Println(Client.Exists(context.Background(), utils.CreateAdminKey(dbKey)).Val())
+	timeToLive := Client.TTL(context.Background(), dbKey).Val()
+	exists := timeToLive != -2
+	if !exists {
+		count = -1
+	}
+	c.JSON(http.StatusOK, gin.H{"value": count, "full_key": dbKey, "is_genuine": isGenuine, "expires": timeToLive, "exists": exists})
 }
