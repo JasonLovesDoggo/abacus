@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,8 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jasonlovesdoggo/abacus/utils"
-
-	"github.com/joho/godotenv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -22,10 +19,7 @@ var Client *redis.Client
 
 func init() {
 	// Connect to Redis
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
+	utils.LoadEnv()
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	fmt.Println("Listening to redis on: " + ADDR)
 	PASS, _ := strconv.Atoi(os.Getenv("REDIS_DB"))

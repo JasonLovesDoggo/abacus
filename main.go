@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/jasonlovesdoggo/abacus/utils"
+
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 )
 
@@ -17,10 +17,8 @@ const DocsUrl string = "https://jasoncameron.dev/abacus/"
 var startTime time.Time
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
+	// only run the following if .env is present
+	utils.LoadEnv()
 	startTime = time.Now()
 	// Initialize the Gin router
 	r := gin.Default()

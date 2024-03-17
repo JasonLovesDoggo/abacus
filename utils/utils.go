@@ -2,8 +2,12 @@ package utils
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"regexp"
 	"strings"
+
+	"github.com/joho/godotenv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,4 +61,15 @@ func CreateAdminKey(key string) string {
 	// remove the K: prefix
 	key = strings.TrimPrefix(key, "K:")
 	return "A:" + key
+}
+
+func LoadEnv() {
+	if _, err := os.Stat(".env"); os.IsNotExist(err) {
+		fmt.Println("No .env file found")
+	} else {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file")
+		}
+	}
 }
