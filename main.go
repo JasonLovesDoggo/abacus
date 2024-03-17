@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-contrib/cors"
+
 	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/gin-gonic/gin"
@@ -45,5 +47,6 @@ func main() {
 		fmt.Println("Analytics enabled")
 	}
 	// Run the server
+	r.Use(cors.Default())
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))
 }
