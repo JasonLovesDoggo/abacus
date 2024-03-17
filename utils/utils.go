@@ -28,7 +28,7 @@ func CreateKey(namespace, key string, skipValidation bool) (string, error) {
 
 // validate checks if the namespace/key meet the validation criteria.
 func validate(input string) error {
-	if len(input) <= 3 || len(input) >= 64 {
+	if len(input) < 3 || len(input) > 64 {
 		return fmt.Errorf("length must be between 3 and 64 characters inclusive")
 	}
 	match, err := regexp.MatchString(`^[A-Za-z0-9_\-.]{3,64}$`, input)
