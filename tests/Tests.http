@@ -1,6 +1,17 @@
-GET http://localhost:8080/hit/jasoncameron.dev/portfolio
+@base=https://localhost:8080
+@token="REPLACE_ME"
 
 
-#
+GET {{base}}/hit/jasoncameron.dev/portfolio
+
 #GET http://localhost:8080/info/jasoncameron.dev/portfolio
+
+
+#{{base}}/info/jasoncameron.dev/portfolio
+
+
+
+POST {{base}}/delete/jasoncameron.dev/portfolio
+Authorization: Bearer {{token}}
+
 
