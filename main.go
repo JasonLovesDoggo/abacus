@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -42,6 +43,7 @@ func main() {
 
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
+		fmt.Println("Analytics enabled")
 	}
 	// Run the server
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))

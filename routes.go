@@ -25,7 +25,7 @@ func init() {
 		log.Fatalf("Error loading .env file")
 	}
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-	fmt.Println("Listening to redis on" + ADDR)
+	fmt.Println("Listening to redis on: " + ADDR)
 	PASS, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
