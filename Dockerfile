@@ -8,6 +8,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./abacus
 # Run stage
 FROM alpine:latest
 COPY --from=builder /src/abacus /abacus
+COPY assets /assets
 EXPOSE 8080
 ENV GIN_MODE=release
 #USER nonroot:nonroot
