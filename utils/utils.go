@@ -13,17 +13,52 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func CreateKey(namespace, key string, skipValidation bool) (string, error) {
+func truncateString(s string, length int) string {
+	if len(s) <= length {
+		return s
+	}
+	return s[:length]
+}
+func getHostPath(c *gin.Context) (string, string) {
+	path := truncateString(strings.ReplaceAll(c.Request.URL.Path, "/", ""), 64)
+	// Extract domain and path                          // todo fix path logic
+	return "", path
+}
+
+func convertReserved(c *gin.Context, input string) (string, bool) {
+	input = strings.Trim(input, "/")
+	if input == ":HOST:" {
+		origin := c.Request.Header.Get("Origin")
+		if origin == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Origin header is required if :HOST: is used"})
+			return "", false
+		}
+		return origin, true
+	} else if input == ":PATH:" {
+		_, path := getHostPath(c)
+		return path, true
+	}
+	host, path := getHostPath(c)
+	fmt.Println(host, path)
+	return input, true
+}
+func CreateKey(c *gin.Context, namespace, key string, skipValidation bool) string {
+	namespace, continueOn := convertReserved(c, namespace)
+	key, continueOn2 := convertReserved(c, key)
+	if !(continueOn && continueOn2) {
+		return ""
+	}
 	if skipValidation == false {
 		if err := validate(namespace); err != nil {
-			return "", err
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid namespace: " + err.Error()})
+			return ""
 		}
 		if err := validate(key); err != nil {
-			return "", err
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key: " + err.Error()})
+			return ""
 		}
 	}
-	key = strings.Trim(key, "/")
-	return "K:" + namespace + ":" + key, nil
+	return "K:" + namespace + ":" + key
 }
 
 // validate checks if the namespace/key meet the validation criteria.
