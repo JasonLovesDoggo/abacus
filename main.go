@@ -44,6 +44,7 @@ func main() {
 	r.POST("/create/:namespace/*key", CreateView)
 	r.GET("/create/:namespace/*key", CreateView)
 	r.GET("/info/:namespace/*key", InfoView)
+	r.POST("/delete/:namespace/*key", DeleteView)
 
 	// Run the server
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))

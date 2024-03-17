@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -103,4 +104,33 @@ func InfoView(c *gin.Context) { // todo: write docs on what negative values mean
 		count = -1
 	}
 	c.JSON(http.StatusOK, gin.H{"value": count, "full_key": dbKey, "is_genuine": isGenuine, "expires": timeToLive, "exists": exists})
+}
+
+func DeleteView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	authToken := c.DefaultQuery("token", "")
+	if authToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token is required, please provide a token in the fmt of ?token=ADMIN_TOKEN"})
+		return
+	}
+	createKey, err := utils.CreateKey(namespace, key, true)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	adminDBKey := utils.CreateAdminKey(createKey)
+	adminKey, err := Client.Get(context.Background(), adminDBKey).Result()
+	if errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This entry is genuine and does not have an admin key. You cannot delete it. If you wanted to delete it, you should have created it with the /create endpoint."})
+
+	} else if adminKey != authToken {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is invalid"})
+	} else {
+		Client.Del(context.Background(), createKey)  // Delete the normal key
+		Client.Del(context.Background(), adminDBKey) // delete the admin key as it's now useless
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + createKey})
+	}
 }

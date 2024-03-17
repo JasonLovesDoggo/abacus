@@ -1,8 +1,9 @@
-@base=https://localhost:8080
+@base=http://localhost:8080
 @token="REPLACE_ME"
+@key=jvc
 
 
-GET {{base}}/hit/jasoncameron.dev/portfolio
+POST {{base}}/delete/{{key}}?token=e7fad266-b34f-4fc3-8788-a6f78f71af1c
 
 #GET http://localhost:8080/info/jasoncameron.dev/portfolio
 
@@ -13,5 +14,6 @@ GET {{base}}/hit/jasoncameron.dev/portfolio
 
 POST {{base}}/delete/jasoncameron.dev/portfolio
 Authorization: Bearer {{token}}
+
 
 
