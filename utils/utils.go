@@ -13,8 +13,7 @@ import (
 )
 
 func CreateKey(namespace, key string, skipValidation bool) (string, error) {
-	if skipValidation == true {
-		fmt.Println("skipValidation")
+	if skipValidation == false {
 		if err := validate(namespace); err != nil {
 			return "", err
 		}
@@ -22,9 +21,6 @@ func CreateKey(namespace, key string, skipValidation bool) (string, error) {
 			return "", err
 		}
 	}
-
-	// Construct the Redis key
-	fmt.Println("k:" + namespace + ":" + key)
 	key = strings.Trim(key, "/")
 	return "K:" + namespace + ":" + key, nil
 }
@@ -35,7 +31,6 @@ func validate(input string) error {
 		return fmt.Errorf("length must be between 3 and 64 characters inclusive")
 	}
 	match, err := regexp.MatchString(`^[A-Za-z0-9_\-.]{3,64}$`, input)
-	fmt.Println(match, err, input)
 	if err != nil {
 		return err
 	}
