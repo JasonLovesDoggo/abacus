@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,10 +17,13 @@ var Client *redis.Client
 
 func init() {
 	// Connect to Redis
+	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
+	PASS, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Redis server address
-		Password: "",               // No password set
-		DB:       0,                // Use the default database
+		Addr:     ADDR, // Redis server address
+		Username: os.Getenv("REDIS_USERNAME"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       PASS,
 	})
 }
 

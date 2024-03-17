@@ -1,18 +1,25 @@
 package main
 
 import (
+	"log"
 	"net/http"
-	_ "strconv"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 )
 
-const DocsUrl string = "https://github.com/JasonLovesDoggo/abacus/blob/master/docs/ROUTES.md"
+const DocsUrl string = "https://jasoncameron.dev/abacus/"
 
 var startTime time.Time
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 	startTime = time.Now()
 	// Initialize the Gin router
 	r := gin.Default()
@@ -33,6 +40,9 @@ func main() {
 	//r.GET("/info/:namespace/:key", getData)
 	//r.GET("/info/:namespace", setData)
 
+	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
+		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
+	}
 	// Run the server
-	_ = r.Run("0.0.0.0:8080")
+	_ = r.Run(os.Getenv("0.0.0.0:" + "PORT"))
 }
