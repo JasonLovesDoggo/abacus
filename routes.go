@@ -71,7 +71,7 @@ func HitView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"count": val})
+	c.JSON(http.StatusOK, gin.H{"value": val})
 }
 
 func CreateView(c *gin.Context) {
