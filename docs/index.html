@@ -21,8 +21,8 @@
     <meta property="og:image" content="abacus.jasoncameron.dev/favicon.ico">
     <meta property="og:image:width" content="64">
     <meta property="og:image:height" content="64">
-    <link rel="stylesheet" type="text/css"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
     <style>
         @import url("https://fonts.googleapis.com/css?family=Open+Sans:400,700");
 
@@ -199,7 +199,7 @@
 </head>
 <body>
 <header class="header">
-    <img src="https://abacus.jasoncameron.dev/favicon.svg">
+    <img src="https://abacus.jasoncameron.dev/favicon.svg" width="96">
     <h1 class="title">Abacus</h1>
     <h2 class="legend">Counting should be easy, right?</h2>
 </header>
@@ -237,8 +237,7 @@
     <p>The <b>hit</b> endpoint provides increment by one counters directly. Each time its requested the counter will
         increase by one:</p>
     <pre class="success" style="font-size: 18px">
-<a href="https://abacus.jasoncameron.dev/hit/namespace/key" target="_blank">https://abacus.jasoncameron.dev/hit/<code>namespace</code>/<code>key</code></a>
-⇒ 200 { "value": 1234 }</pre>
+<a href="https://abacus.jasoncameron.dev/hit/namespace/key" target="_blank">https://abacus.jasoncameron.dev/hit/<code>namespace</code>/<code>key</code></a>⇒ 200 { "value": 1234 }</pre>
     <p>Want to start counting right away? Check the examples below!</p>
     <h1 id="example">Example</h1>
     <p>Lets say you want to display the number of page views a site received.</p>
@@ -256,28 +255,25 @@
 <!--        });-->
 <!--    </div>-->
     <h4>Using JSONP</h4>
-    <div class="highlight html">&lt;script&gt;
-        function cb(response) {
-        document.getElementById('visits').innerText = response.value;
-        }
-        &lt;/script&gt;
-        &lt;script async src="https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits?callback=cb"&gt;&lt;/script&gt;
-    </div>
+    <div class="highlight html"> &lt;script&gt;
+     function cb(response) {
+         document.getElementById('visits').innerText = response.value;
+     }
+ &lt;/script&gt;
+ &lt;script async src="https://api.countapi.xyz/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
     <h4>Using XHR</h4>
-    <div class="highlight js">var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
-        xhr.responseType = "json";
-        xhr.onload = function() {
-        document.getElementById('visits').innerText = this.response.value;
-        }
-        xhr.send();
-    </div>
+    <div class="highlight js"> var xhr = new XMLHttpRequest();
+ xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
+ xhr.responseType = "json";
+ xhr.onload = function() {
+    document.getElementById('visits').innerText = this.response.value;
+ }
+ xhr.send();</div>
     <h4>Using jQuery</h4>
-    <div class="highlight js">$.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
-        function(response) {
+    <div class="highlight js"> $.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
+    function(response) {
         $("#visits").text(response.value);
-        });
-    </div>
+    }); </div>
     <h3>Multiple pages</h3>
     <p>If you want to have a counter for each individual page you can replace <code>visits</code> with a unique
         identifier for each page, i.e. <code>index</code>, <code>contact</code>, <code>item-1234</code>. Check <a
@@ -298,31 +294,30 @@
     <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, lets say:</p>
-    <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
-        &lt;script&gt;
-        function clicked() {
-        var xhr = new XMLHttpRequest();
+            <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
+&lt;script&gt;
+function clicked() {
+    var xhr = new XMLHttpRequest();
         xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
-        xhr.responseType = "json";
-        xhr.onload = function() {
+    xhr.responseType = "json";
+    xhr.onload = function() {
         alert(`This button has been clicked ${this.response.value} times!`);
-        }
-        xhr.send();
-        }
-        &lt;/script&gt;
-    </div>
-    <button onclick="clicked()">Press Me!</button>
-    <script>
-        function clicked() {
-            var xhr = new XMLHttpRequest();
+    }
+    xhr.send();
+}
+&lt;/script&gt;</div>
+            <button onclick="clicked()">Press Me!</button>
+            <script>
+            function clicked() {
+                var xhr = new XMLHttpRequest();
             xhr.open("GET", "https://abacus.jasoncameron.dev/hit/mysite.com/awesomeclick");
-            xhr.responseType = "json";
-            xhr.onload = function () {
-                alert(`This button has been clicked ${this.response.value} times!`);
+                xhr.responseType = "json";
+                xhr.onload = function() {
+                    alert(`This button has been clicked ${this.response.value} times!`);
+                }
+                xhr.send();
             }
-            xhr.send();
-        }
-    </script>
+            </script>
 <!--    <h1 id="libraries">Libraries</h1>-->
 <!--    The official javascript promise based wrapper is available in <a href="https://www.npmjs.com/package/countapi-js"-->
 <!--                                                                     target="_blank">countapi-js <img alt="npm"-->
@@ -416,17 +411,15 @@
 
 <a href="https://abacus.jasoncameron.dev/update/nonexisting?amount=1" target="_blank">https://abacus.jasoncameron.dev/update/nonexisting?amount=1</a>
 ⇒ 404 { "value": null }</pre>
-    <h3 class="endpoint">/hit/:namespace?/:key</h3>
-    <p>An easier way to track incrementing by one keys. This endpoint will create a key if it doesn't exists and
-        increment it by one on each subsequent request. Optionally specify a namespace.<br>The key created has the
-        following properties:</p>
-    <ul>
-        <li><code>enable_reset</code> to <code>0</code> (false)</li>
-        <li><code>update_lowerbound</code> to <code>0</code></li>
-        <li><code>update_upperbound</code> to <code>1</code></li>
-    </ul>
-    <p>Effectively making the key only incrementable by one.</p>
-    <pre class="success">
+            <h3 class="endpoint">/hit/:namespace?/:key</h3>
+            <p>An easier way to track incrementing by one keys. This endpoint will create a key if it doesn't exists and increment it by one on each subsequent request. Optionally specify a namespace.<br>The key created has the following properties:</p>
+            <ul>
+                <li><code>enable_reset</code> to <code>0</code> (false)</li>
+                <li><code>update_lowerbound</code> to <code>0</code></li>
+                <li><code>update_upperbound</code> to <code>1</code></li>
+            </ul>
+            <p>Effectively making the key only incrementable by one.</p>
+            <pre class="success">
 <a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits"
    target="_blank">https://abacus.jasoncameron.dev/hit/mysite.com/visits</a> (value was 35)
 ⇒ 200 { "value": 36 }
@@ -528,10 +521,12 @@
         made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
                 href="https://countapi.xyz">CountAPI</a>.
     </footer>
-    <script type="text/javascript"
-            src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        function request(url, callback) {
+        document.querySelectorAll('div.code').forEach(el => {
+            // then highlight each
+            hljs.highlightElement(el);
+        });
+    function request(url, callback) {
             var req = new XMLHttpRequest();
             req.open("GET", url);
             req.responseType = 'json';
@@ -571,17 +566,17 @@
             });
         }
 
-        hljs.configure({tabReplace: '    '});
-        document.addEventListener('DOMContentLoaded', function (event) {
-            updateDomain("mysite.com");
-            document.getElementById('domain').addEventListener('input', function (e) {
-                e.target.value = e.target.value.replace('https://', '').replace('http://', '').replace(/[^A-Za-z0-9_\-.]/g, '');
-                updateDomain(e.target.value);
+            hljs.configure({tabReplace:'    '});
+            document.addEventListener('DOMContentLoaded', function(event) {
+                updateDomain("mysite.com");
+                document.getElementById('domain').addEventListener('input', function(e) {
+                    e.target.value = e.target.value.replace('https://', '').replace('http://', '').replace(/[^A-Za-z0-9_\-.]/g, '');
+                    updateDomain(e.target.value);
+                });
+                document.querySelectorAll('div.highlight').forEach(function(block){
+                    hljs.highlightBlock(block);
+                });
             });
-            document.querySelectorAll('div.highlight').forEach(function (block) {
-                hljs.highlightBlock(block);
-            });
-        });
     </script>
 </section>
 </body>
