@@ -55,7 +55,10 @@ func InfoView(c *gin.Context) {
 
 func HitView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
-	fmt.Println("namespace:"+namespace, "key:"+key)
+	if namespace == "" || key == "" {
+		return
+	}
+	//fmt.Println("namespace:"+namespace, "key:"+key)
 	dbKey, err := utils.CreateKey(namespace, key, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -73,6 +76,9 @@ func HitView(c *gin.Context) {
 
 func CreateView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
 	dbKey, err := utils.CreateKey(namespace, key, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

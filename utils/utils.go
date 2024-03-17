@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -43,6 +44,10 @@ func validate(input string) error {
 func GetNamespaceKey(c *gin.Context) (string, string) {
 	var namespace, key string
 	key = strings.Trim(c.Param("key"), "/")
+	if strings.Contains(key, "/") {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Route not found. Use /create/:namespace/:key or /hit/:key instead."})
+		return "", ""
+	}
 	if !(len(key) > 0) {
 		namespace = "default"
 		key = c.Param("namespace")
