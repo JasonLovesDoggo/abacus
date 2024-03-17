@@ -44,5 +44,5 @@ func main() {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
 	}
 	// Run the server
-	_ = r.Run(os.Getenv("0.0.0.0:" + "PORT"))
+	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))
 }
