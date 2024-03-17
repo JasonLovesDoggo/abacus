@@ -1,0 +1,40 @@
+package utils
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+func CreateKey(namespace, key string, skipValidation bool) (string, error) {
+	if skipValidation == true {
+		fmt.Println("skipValidation")
+		if err := validate(namespace); err != nil {
+			return "", err
+		}
+		if err := validate(key); err != nil {
+			return "", err
+		}
+	}
+
+	// Construct the Redis key
+	fmt.Println("k:" + namespace + ":" + key)
+	key = strings.Trim(key, "/")
+	return "K:" + namespace + ":" + key, nil
+}
+
+// validate checks if the namespace/key meet the validation criteria.
+func validate(input string) error {
+	if len(input) <= 3 || len(input) >= 64 {
+		return fmt.Errorf("length must be between 3 and 64 characters inclusive")
+	}
+	match, err := regexp.MatchString(`^[A-Za-z0-9_\-.]{3,64}$`, input)
+	fmt.Println(match, err, input)
+	if err != nil {
+		return err
+	}
+	if !match {
+		return fmt.Errorf("must match the pattern ^[A-Za-z0-9_\\-.]{3,64}$")
+	}
+	return nil
+}
