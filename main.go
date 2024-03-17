@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 
 	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/gin-gonic/gin"
-	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 )
 
 const DocsUrl string = "https://jasoncameron.dev/abacus/"
@@ -24,6 +24,11 @@ func main() {
 	startTime = time.Now()
 	// Initialize the Gin router
 	r := gin.Default()
+	r.Use(cors.Default())
+	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
+		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
+		fmt.Println("Analytics enabled")
+	}
 
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
@@ -42,11 +47,6 @@ func main() {
 	//r.GET("/info/:namespace/:key", getData)
 	//r.GET("/info/:namespace", setData)
 
-	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
-		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
-		fmt.Println("Analytics enabled")
-	}
 	// Run the server
-	r.Use(cors.Default())
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))
 }
