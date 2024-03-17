@@ -35,6 +35,8 @@ func main() {
 		c.Redirect(http.StatusPermanentRedirect, DocsUrl)
 	})
 	// heath check
+	r.StaticFile("/favicon.svg", "./assets/favicon.svg")
+	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
 	r.GET("/healthcheck", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{
 			"status": "ok", "uptime": time.Since(startTime).String()})
