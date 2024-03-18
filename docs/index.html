@@ -287,10 +287,10 @@
     <ul>
         <li><code>:HOST:</code> will be replaced with <code>mysite.com</code></li>
         <li><code>:PATHNAME:</code> will be replaced with <code>examplepage</code></li> 
-        <p>NOTE: :PATHNAME: is only availible when the <code>Referer</code> header is set.</p>
+        <pre class="info">Note: :PATHNAME: is only availible when the <code>Referer</code> header is set.</pre>
     </ul>
     <br>
-    <pre class="info">Note: Reserved words are padded with dots if their length is less than three.</pre>
+    <pre class="info">Note: Reserved words are left padded with dots if their length is less than three.</pre>
     <p>So you could use something like:</p>
     <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATHNAME:</a></pre>
     <p>Or even more generic (though not recommended):</p>
