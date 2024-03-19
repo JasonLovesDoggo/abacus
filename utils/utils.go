@@ -15,39 +15,46 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func truncateString(s string, length int) string {
-	if len(s) <= length {
-		return s
+// truncateString truncates the string to a maximum of 64 characters. If the string is less than 3 characters, it will be padded with dots.
+func truncateString(s string) string {
+
+	strLen := len(s)
+	if strLen < MinLength {
+		return strings.Repeat(".", MinLength-strLen) + s
 	}
-	return s[:length]
-}
-func getHostPath(c *gin.Context) (string, string) {
-	path := truncateString(strings.ReplaceAll(c.Request.URL.Path, "/", ""), 64)
-	// Extract domain and path                          // todo fix path logic
-	return "", path
+	if strLen > MaxLength {
+		return s[:MaxLength]
+	}
+	return s
+
 }
 
-func convertReserved(c *gin.Context, input string) (string, bool) {
+func convertReserved(c *gin.Context, input string) string {
 	input = strings.Trim(input, "/")
 	if input == ":HOST:" {
 		origin := c.Request.Header.Get("Origin")
 		if origin == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Origin header is required if :HOST: is used"})
-			return "", false
+			return ""
 		}
-		return origin, true
+		return truncateString(origin)
 	} else if input == ":PATH:" {
-		_, path := getHostPath(c)
-		return path, true
+		path := c.Request.Header.Get("Referer")
+		if path == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Referer header is required if :PATH: is used"})
+			return ""
+		}
+
+		return truncateString(path)
+
 	}
-	host, path := getHostPath(c)
-	fmt.Println(host, path)
-	return input, true
+
+	return input
 }
 func CreateKey(c *gin.Context, namespace, key string, skipValidation bool) string {
-	namespace, continueOn := convertReserved(c, namespace)
-	key, continueOn2 := convertReserved(c, key)
-	if !(continueOn && continueOn2) {
+	namespace = convertReserved(c, namespace)
+	key = convertReserved(c, key)
+	if key == "" || namespace == "" {
 		return ""
 	}
 	if skipValidation == false {

@@ -48,6 +48,9 @@ func HitView(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
+	go func() {
+		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+	}()
 
 	c.JSON(http.StatusOK, gin.H{"value": val})
 }
@@ -78,7 +81,7 @@ func CreateView(c *gin.Context) {
 		return
 	}
 	// Get data from Redis
-	created := Client.SetNX(context.Background(), dbKey, initialValue, 0)
+	created := Client.SetNX(context.Background(), dbKey, initialValue, utils.BaseTTLPeriod)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
 		return
@@ -87,8 +90,8 @@ func CreateView(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key already exists, please use a different key."})
 		return
 	}
-	AdminKey := uuid.New().String() // Create a new admin key used for deletion and control
-	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0)
+	AdminKey := uuid.New().String()                                            // Create a new admin key used for deletion and control
+	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0) // todo: figure out how to handle admin keys (handle alongside admin orrrrrrr separately as in a routine once a month that deletes all admin keys with no corresponding key)
 	c.JSON(http.StatusCreated, gin.H{"key": key, "namespace": namespace, "admin_key": AdminKey, "value": initialValue})
 }
 
