@@ -17,3 +17,7 @@ Authorization: Bearer {{token}}
 
 
 
+
+//
+###
+PUT http://localhost:8080/update/SAOH9hhi220cn4VJ/qifYRkw0B47FFhNN?value=4978&token=d7c38748-7f94-4ae1-adc3-fa3bbc22b6e0

@@ -43,11 +43,21 @@ func main() {
 	})
 
 	r.GET("/hit/:namespace/*key", HitView)
+
 	r.POST("/create/:namespace/*key", CreateView)
 	r.GET("/create/:namespace/*key", CreateView)
+
 	r.GET("/create/", CreateRandomView)
+	r.POST("/create/", CreateRandomView)
+
 	r.GET("/info/:namespace/*key", InfoView)
-	r.POST("/delete/:namespace/*key", DeleteView)
+
+	authorized := r.Group("")
+	authorized.Use(AuthMiddleware())
+
+	authorized.POST("/delete/:namespace/*key", DeleteView)
+
+	authorized.PUT("/update/:namespace/*key", UpdateView)
 
 	// Run the server
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))

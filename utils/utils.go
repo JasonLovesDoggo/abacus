@@ -51,6 +51,17 @@ func convertReserved(c *gin.Context, input string) string {
 
 	return input
 }
+
+func CreateRawAdminKey(c *gin.Context) string {
+	namespace, key := GetNamespaceKey(c)
+	namespace = convertReserved(c, namespace)
+	key = convertReserved(c, key)
+	if key == "" || namespace == "" {
+		return ""
+	}
+	return "A:" + namespace + ":" + key
+
+}
 func CreateKey(c *gin.Context, namespace, key string, skipValidation bool) string {
 	namespace = convertReserved(c, namespace)
 	key = convertReserved(c, key)
