@@ -57,7 +57,8 @@ func main() {
 
 	authorized.POST("/delete/:namespace/*key", DeleteView)
 
-	authorized.PUT("/update/:namespace/*key", UpdateView)
+	authorized.POST("/update/:namespace/*key", UpdateView)
+	authorized.POST("/reset/:namespace/*key", ResetView)
 
 	// Run the server
 	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))

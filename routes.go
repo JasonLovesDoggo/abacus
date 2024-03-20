@@ -131,6 +131,7 @@ func DeleteView(c *gin.Context) {
 }
 
 func UpdateView(c *gin.Context) {
+	fmt.Println("update view", c.Params)
 	updatedValueRaw, _ := c.GetQuery("value")
 	if updatedValueRaw == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "value is required, please provide a number in the fmt of ?value=NEW_VALUE"})
@@ -154,12 +155,35 @@ func UpdateView(c *gin.Context) {
 	// Get data from Redis
 	val, err := Client.SetXX(context.Background(), dbKey, updatedValue, utils.BaseTTLPeriod).Result()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
 		return
 	}
 	if val == false {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"value": updatedValue})
+	}
+}
+
+func ResetView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+
+	// Get data from Redis
+	val, err := Client.SetXX(context.Background(), dbKey, 0, utils.BaseTTLPeriod).Result()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
+		return
+	}
+	if val == false {
+		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"value": 0})
 	}
 }
