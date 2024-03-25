@@ -1,3 +1,5 @@
-.idea/copilot
+.idea
 abacus.exe
 .env
+
+!.idea/httpRequests

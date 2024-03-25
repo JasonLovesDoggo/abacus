@@ -130,8 +130,7 @@ func DeleteView(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + createKey})
 }
 
-func UpdateView(c *gin.Context) {
-	fmt.Println("update view", c.Params)
+func SetView(c *gin.Context) {
 	updatedValueRaw, _ := c.GetQuery("value")
 	if updatedValueRaw == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "value is required, please provide a number in the fmt of ?value=NEW_VALUE"})
@@ -186,4 +185,46 @@ func ResetView(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"value": 0})
 	}
+}
+
+func UpdateByView(c *gin.Context) {
+	updatedValueRaw, _ := c.GetQuery("value")
+	if updatedValueRaw == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "value is required, please provide a number in the fmt of ?value=NEW_VALUE"})
+		return
+
+	}
+	incrByValue, err := strconv.Atoi(updatedValueRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "value must be a number, this means no floats."})
+		return
+	}
+	if incrByValue == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "changing value by 0 does nothing, please provide a non-zero value in the fmt of ?value=NEW_VALUE"})
+		return
+	}
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+
+	exists := Client.Exists(context.Background(), dbKey).Val() == 0
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please first create it using /create."})
+		return
+	}
+
+	// Get data from Redis
+	val, err := Client.IncrByFloat(context.Background(), dbKey, float64(incrByValue)).Result()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
+
 }

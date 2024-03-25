@@ -1,11 +1,21 @@
 @base=http://localhost:8080
-@token="REPLACE_ME"
-@key=jvc
+@admin_token=f559c7d6-2f5a-4220-806a-83e23c4e91c3
+@namespace=default
+@key=qifYRkw0B47FFhNN
 
 
-POST {{base}}/delete/{{key}}?token=e7fad266-b34f-4fc3-8788-a6f78f71af1c
+POST {{base}}/create/{{namespace}}/{{key}}
 
-#GET http://localhost:8080/info/jasoncameron.dev/portfolio
+
+>{%
+    client.global.set("admin_token", response.body.admin_key);
+%}
+
+###
+GET {{base}}/info/{{key}}
+
+###
+GET {{base}}/hit/{{namespace}}/{{key}}
 
 
 #{{base}}/info/jasoncameron.dev/portfolio
@@ -20,4 +30,11 @@ Authorization: Bearer {{token}}
 
 //
 ###
-POST http://localhost:8080/reset/SAOH9hhi220cn4VJ/qifYRkw0B47FFhNN?token=d7c38748-7f94-4ae1-adc3-fa3bbc22b6e0
+POST {{base}}/reset/{{namespace}}/{{key}}?token={{admin_token}}
+
+###
+POST {{base}}/update/{{namespace}}/{{key}}?token={{admin_token}}&value=40589
+
+###
+// use at the end to clear up testcases.
+POST {{base}}/delete/{{key}}?token={{admin_token}}
