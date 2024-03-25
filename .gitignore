@@ -1,5 +1,4 @@
 .idea
-abacus.exe
+tmp
 .env
-
 !.idea/httpRequests
