@@ -5,7 +5,7 @@
     <option name="nameOverrideEnabled" value="true" />
     <option name="nameOverrideText" value="Abacus" />
     <option name="description" value="A simple counter. Scaled to infinity." />
-    <option name="theme" value="flat" />
+    <option name="theme" value="material" />
     <option name="button1Title" value="Check it out!" />
     <option name="button1Url" value="https://abacus.jasoncameron.dev" />
     <option name="button2Title" value="GitHub - Drop a star!" />
