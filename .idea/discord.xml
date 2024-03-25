@@ -8,7 +8,7 @@
     <option name="theme" value="flat" />
     <option name="button1Title" value="Check it out!" />
     <option name="button1Url" value="https://abacus.jasoncameron.dev" />
-    <option name="button2Title" value="Github" />
+    <option name="button2Title" value="GitHub - Drop a star!" />
     <option name="button2Url" value="https://github.com/Jasonlovesdoggo/abacus" />
   </component>
 </project>
