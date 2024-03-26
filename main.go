@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/jasonlovesdoggo/abacus/middleware"
+
 	"github.com/gin-contrib/cors"
 	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 
@@ -29,6 +31,8 @@ func main() {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
 		fmt.Println("Analytics enabled")
 	}
+	route := r.Group("")
+	route.Use(middleware.RateLimit(Client))
 
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
@@ -37,23 +41,23 @@ func main() {
 	// heath check
 	r.StaticFile("/favicon.svg", "./assets/favicon.svg")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
-	r.GET("/healthcheck", func(context *gin.Context) {
+	route.GET("/healthcheck", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{
 			"status": "ok", "uptime": time.Since(startTime).String()})
 	})
 
-	r.GET("/hit/:namespace/*key", HitView)
+	route.GET("/hit/:namespace/*key", HitView)
 
-	r.POST("/create/:namespace/*key", CreateView)
-	r.GET("/create/:namespace/*key", CreateView)
+	route.POST("/create/:namespace/*key", CreateView)
+	route.GET("/create/:namespace/*key", CreateView)
 
-	r.GET("/create/", CreateRandomView)
-	r.POST("/create/", CreateRandomView)
+	route.GET("/create/", CreateRandomView)
+	route.POST("/create/", CreateRandomView)
 
-	r.GET("/info/:namespace/*key", InfoView)
+	route.GET("/info/:namespace/*key", InfoView)
 
-	authorized := r.Group("")
-	authorized.Use(AuthMiddleware())
+	authorized := route.Group("")
+	authorized.Use(middleware.Auth(Client))
 
 	authorized.POST("/delete/:namespace/*key", DeleteView)
 
