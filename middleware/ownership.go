@@ -1,17 +1,17 @@
-package main
+package middleware
 
 import (
 	"context"
 	"errors"
 	"net/http"
 
-	"github.com/go-redis/redis/v8"
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jasonlovesdoggo/abacus/utils"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func Auth(Client *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authToken := c.DefaultQuery("token", "")
 		if authToken == "" {
