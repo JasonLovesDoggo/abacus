@@ -1,15 +1,15 @@
 # Abacus - A simple counting API written in Golang 
                                                                
-[//]: # (          )
-[//]: # (# Installation)
+          
+# Installation
 
-[//]: # (1. Install Nim & Redis)
+1. Install Golang & Redis
 
-[//]: # (2. Run `nimble install` to install the dependencies)
+2. Run `go mod install` to install the dependencies
 
-[//]: # (3. Run `nim c -r --verbosity:0 src/abacus.nim` to build and run the API locally.)
+3. Run `air` (if installed) or `go build` to build and run the API locally.
 
-[//]: # (4. The API will be running on `http://localhost:5000` by default.)
+4. The API will be running on `http://0.0.0.0:8080` by default.
 
 
 ## Introduction
