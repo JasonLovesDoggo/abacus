@@ -27,7 +27,7 @@ I currently use it on my personal website to keep track of the number of visitor
   - [x] /set endpoint 
   - [x] /reset (alias to /set 0)
   - [x] /update endpoint (updates the counter x)
-- [ ] SSE Stream for the counters? Low priority.
+- [x] SSE Stream for the counters? Low priority.
 - [ ] Tests
 - [x] Rate limiting (max 30 requests per 3 second per IP address)
 - [ ] Create [Python](https://github.com/BenJetson/py-countapi) & [JS Wrappers](https://github.com/mlomb/countapi-js)
