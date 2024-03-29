@@ -47,6 +47,7 @@ func main() {
 	})
 
 	route.GET("/hit/:namespace/*key", HitView)
+	route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)
 
 	route.POST("/create/:namespace/*key", CreateView)
 	route.GET("/create/:namespace/*key", CreateView)

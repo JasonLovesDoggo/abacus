@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 
@@ -16,7 +17,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var Client *redis.Client
+var (
+	Client        *redis.Client
+	subscriberMap = make(map[string]chan int) // Map to store channels for each counter
+	mutex         sync.Mutex
+)
+
+func SetStream(dbKey string, value int) {
+	mutex.Lock()
+	ch, ok := subscriberMap[dbKey]
+	mutex.Unlock()
+	if ok {
+		ch <- value
+	}
+}
 
 func init() {
 	// Connect to Redis
@@ -32,12 +46,72 @@ func init() {
 	})
 }
 
+func StreamValueView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" {
+		return
+	}
+	// Create a channel for this counter's updates if not already created
+	mutex.Lock()
+	ch, ok := subscriberMap[dbKey]
+	if !ok {
+		ch = make(chan int)
+		subscriberMap[dbKey] = ch
+	}
+	mutex.Unlock()
+
+	// Listen for client disconnect
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer func() {
+		cancel()
+		_ch, _ok := subscriberMap[dbKey]
+		if _ok {
+			mutex.Lock()
+			close(_ch)
+			delete(subscriberMap, dbKey)
+			mutex.Unlock()
+		}
+	}()
+
+	// Send initial count to a client
+	val := Client.Get(context.Background(), dbKey).Val()
+	if count, err := strconv.Atoi(val); err == nil {
+		message := fmt.Sprintf("{\"value\": %d}\n", count)
+		_, err := c.Writer.WriteString(message)
+		if err != nil {
+			return
+		}
+		c.Writer.Flush()
+	}
+
+	// Stream count updates to the client
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case count, open := <-ch:
+			if !open {
+				return
+			}
+			message := fmt.Sprintf("{\"value\": %d}\n", count)
+			_, err := c.Writer.WriteString(message)
+			if err != nil {
+				return
+			}
+			c.Writer.Flush()
+		}
+	}
+}
+
 func HitView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
 		return
 	}
-	//fmt.Println("namespace:"+namespace, "key:"+key)
 	dbKey := utils.CreateKey(c, namespace, key, false)
 	if dbKey == "" { // error is handled in CreateKey
 		return
@@ -49,6 +123,7 @@ func HitView(c *gin.Context) {
 		return
 	}
 	go func() {
+		SetStream(dbKey, int(val))
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
 
@@ -121,14 +196,22 @@ func DeleteView(c *gin.Context) {
 	if namespace == "" || key == "" {
 		return
 	}
-	createKey := utils.CreateKey(c, namespace, key, true)
-	if createKey == "" { // error is handled in CreateKey
+	dbKey := utils.CreateKey(c, namespace, key, true)
+	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	adminDBKey := utils.CreateAdminKey(createKey) // Create the admin key
-	Client.Del(context.Background(), createKey)   // Delete the normal key
-	Client.Del(context.Background(), adminDBKey)  // delete the admin key as it's now useless
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + createKey})
+	adminDBKey := utils.CreateAdminKey(dbKey)    // Create the admin key
+	Client.Del(context.Background(), dbKey)      // Delete the normal key
+	Client.Del(context.Background(), adminDBKey) // delete the admin key as it's now useless
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + dbKey})
+	// Close SSE stream
+	mutex.Lock()
+	ch, ok := subscriberMap[dbKey]
+	mutex.Unlock()
+	if ok {
+		close(ch)
+		delete(subscriberMap, dbKey)
+	}
 }
 
 func SetView(c *gin.Context) {
@@ -161,6 +244,7 @@ func SetView(c *gin.Context) {
 	if val == false {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
 	} else {
+		go SetStream(dbKey, updatedValue)
 		c.JSON(http.StatusOK, gin.H{"value": updatedValue})
 	}
 }
@@ -185,6 +269,7 @@ func ResetView(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"value": 0})
+		go SetStream(dbKey, 0)
 	}
 }
 
@@ -227,5 +312,5 @@ func UpdateByView(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
-
+	go SetStream(dbKey, int(val))
 }

@@ -1,18 +1,35 @@
 @base=http://localhost:8080
-@admin_token=f559c7d6-2f5a-4220-806a-83e23c4e91c3
-@namespace=default
-@key=qifYRkw0B47FFhNN
+@admin_token=c890f291-1fe5-4b85-b1c4-8ac134e46a3e
+@namespace=svHLjhuDHg3nfdez
+@key=jIVwyek-ZXR7PNzx
 
 
 POST {{base}}/create/{{namespace}}/{{key}}
 
 
->{%
+> {%
     client.global.set("admin_token", response.body.admin_key);
+    client.log("token: " + response.body.admin_key);
 %}
 
+
 ###
-GET {{base}}/info/{{key}}
+
+#POST {{base}}/create
+#
+#> {%
+#  client.global.set("namespace", response.body.namespace);
+#  client.global.set("key", response.body.key);
+#  client.global.set("admin_token", response.body.admin_key);
+#  client.log("namespace: " + response.body.namespace);
+#    client.log("key: " + response.body.key);
+#    client.log("token: " + response.body.admin_key);
+#
+#
+# %}
+
+###
+GET {{base}}/info/{{namespace}}/{{key}}
 
 ###
 GET {{base}}/hit/{{namespace}}/{{key}}
@@ -33,8 +50,12 @@ Authorization: Bearer {{token}}
 POST {{base}}/reset/{{namespace}}/{{key}}?token={{admin_token}}
 
 ###
-POST {{base}}/update/{{namespace}}/{{key}}?token={{admin_token}}&value=40589
+POST {{base}}/update/{{namespace}}/{{key}}?token={{admin_token}}&value=-40589
+
+###
+POST {{base}}/set/{{namespace}}/{{key}}?token={{admin_token}}&value=3208
+
 
 ###
 // use at the end to clear up testcases.
-POST {{base}}/delete/{{key}}?token={{admin_token}}
+POST {{base}}/delete/{{namespace}}/{{key}}?token={{admin_token}}
