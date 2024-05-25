@@ -44,3 +44,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps: 
+    - name: sleep for 20s
+      run: sleep 20s
+      shell: bash
+    - name: redeploy
+      run: curl ${{secrets.DEPLOY_HOOK}}
+      shell: bash
+      
