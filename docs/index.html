@@ -219,7 +219,7 @@
 
     <p>
         Want to track the number of hits a page had? Sure.<br>
-        Want to know the number of users that clicked on the button "Feed Cow"? There you go.
+        Want to know the number of users that clicked on the button "Press me"? There you go.
     </p>
 
     <p>
@@ -290,7 +290,7 @@
     <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATHNAME:</a></pre>
     <p>Or even more generic (though not recommended):</p>
     <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:</a></pre>
-    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>
+<!--    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>-->
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, lets say:</p>
             <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
@@ -322,17 +322,11 @@ function clicked() {
 <!--                                                                     target="_blank">countapi-js <img alt="npm"-->
 <!--                                                                                                      src="https://img.shields.io/npm/v/countapi-js"></a>.-->
 <!--    <h1 id="roadmap">Roadmap</h1>-->
-    <p>If this API starts getting some traction, I have some ideas in mind:</p>
-    <ul>
-        <li>Being able to open a <a
-                href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Receiving_events_from_the_server"
-                target="_blank">SSE stream</a> and receive updates in real time avoiding polling
-        </li>
-        <li>Enable batch creating/updating</li>
-        <li>Unique counting?</li>
-        <li>Float numbers?</li>
-        <li>Generate a secret key to update/reset keys</li>
-    </ul>
+<!--    <p>If you have any f, I have some ideas in mind:</p>-->
+<!--    <ul>-->
+<!--        <li>Enable batch creating/updating</li>-->
+<!--        <li>Float numbers?</li>-->
+<!--    </ul>-->
     <h1 id="faq">FAQ</h1>
     <h2>Where is the API documentation?</h2>
     <p><a href="#api">Scroll</a> a bit further.</p>
@@ -440,7 +434,9 @@ function clicked() {
 ⇒ 200 { "value": 1 }</pre>
 
     <h3 class="endpoint">/stream/:namespace/*key</h3>
-    <p>Stream updates to a counter's value using Server-Sent Events (SSE). Optionally specify a namespace.</p>
+    <p>Stream updates to a counter's value using <a
+            href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Receiving_events_from_the_server"
+            target="_blank">Server-Sent Events (SSE)</a>. This means you get updated right as a key is updated instead of having to poll.  Optionally specify a namespace.</p>
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/stream/mysite.com/visits" target="_blank">GET /stream/mysite.com/visits</a>
 ⇒ data: {"value": 36}
