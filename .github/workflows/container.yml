@@ -39,8 +39,8 @@ jobs:
     needs: build-and-push-image
     runs-on: ubuntu-latest
     steps:
-      - name: sleep for 20s
-        run: sleep 20s
+      - name: sleep for 5s
+        run: sleep 5s
         shell: bash
       - name: redeploy
         run: 'curl ${{secrets.DEPLOY_HOOK}}'
