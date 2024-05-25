@@ -45,6 +45,12 @@ func main() {
 		context.JSON(http.StatusOK, gin.H{
 			"status": "ok", "uptime": time.Since(startTime).String()})
 	})
+    route.GET("/docs", func(context *gin.Context) {
+        context.Redirect(http.StatusPermanentRedirect, DocsUrl)
+    })
+
+
+    route.GET("/get/:namespace/*key", GetView)
 
 	route.GET("/hit/:namespace/*key", HitView)
 	route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)

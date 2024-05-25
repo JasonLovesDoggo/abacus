@@ -130,6 +130,37 @@ func HitView(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"value": val})
 }
 
+
+func GetView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+	// Get data from Redis
+	val, err := Client.Get(context.Background(), dbKey).Result()
+
+
+  if err == redis.Nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
+        return
+    } else if err != nil { // Other Redis errors
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+        return
+    }
+
+	go func() {
+		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"value": val})
+}
+
+
+
 func CreateRandomView(c *gin.Context) {
 	key, _ := utils.GenerateRandomString(16)
 	namespace, err := utils.GenerateRandomString(16)
