@@ -1,11 +1,12 @@
 name: Create and publish a Docker image then deploy it
-'on':
+on:
   push:
     paths:
       - '**.go'
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: '${{ github.repository }}'
+
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
