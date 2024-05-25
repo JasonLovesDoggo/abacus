@@ -340,9 +340,42 @@ function clicked() {
     <h2>Is the API free?</h2>
     <p>Completely free.</p>
     <h2>Rate Limiting?</h2>
-    <p>Yes, there is a general ratelimit of 30/IP/3s. If you have an issue with this, shoot me an email @ <a href="mailto:abacus@jasoncameron.dev">abacus@jasoncameron.dev</a></p>
+    <h4>General Rate Limit</h4>
+
+    <ul>
+        <li><strong>Limit:</strong> 30 requests</li>
+        <li><strong>Window:</strong> 3 seconds</li>
+        <li><strong>Scope:</strong> Per IP address</li>
+    </ul>
+    <p>
+        This means that each unique IP address is allowed to make a maximum of 30 requests every 3 seconds. Exceeding
+        this limit will temporarily block further requests from that IP until your limit is up.
+    </p>
+    <p>If you require a higher rate limit for legitimate use cases, please contact me at <a
+            href="mailto:abacus@jasoncameron.dev">abacus@jasoncameron.dev</a>.</p>
+
+    <h4>Rate Limit Headers</h4>
+
+    <p>The API provides informative headers in responses to help you track your usage:</p>
+    <ul>
+        <li><code>RateLimit-Remaining</code>: Number of requests remaining in the current window.</li>
+        <li><code>RateLimit-Reset</code>: Unix timestamp indicating when the rate limit window resets.</li>
+        <li><code>RateLimit-Policy</code>: String describing the rate limit policy (e.g., "30;w=3" for 30 requests per 3
+            seconds).
+        </li>
+        <li><code>Retry-After</code>: Number of ms to wait before retrying (included when rate limited).</li>
+
+
+
+    </ul>
+       <h4>Rate Limit Exceeded</h4>
+    When you exceed the rate limit, the API will respond with a <code>429 Too Many Requests</code> status code response similar to:
+    <pre style="margin-top: 1vh" class="success">{
+    "error": "Too many requests. Try again in 2s"
+}
+</pre>
     <h2>Can I delete a key?</h2>
-    <p>If you originally created the key using the /create endpoint, then yes you can delete the key and all data associated with it by using the /delete endpoint along with your admin key.</p>
+    <p>If you originally created the key using the <a href="#create">/create endpoint</a>, then yes, you can delete the key and all data associated with it by using the /delete endpoint along with your admin key.</p>
     <h2>Will I blow up the CountAPI server?</h2>
     <p>CountAPI is using <a href="https://redis.io/" target="_blank">Redis</a> as a database, a rapid key-value
         solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you <a
@@ -350,172 +383,172 @@ function clicked() {
     <h2 id="contact">Issues/Contact</h2>
     <p>If you have issues, suggestions or just want to contact me, shoot me <a href="mailto:abacus@jasoncameron.dev" target="_blank">an email</a> or <a href="https://github.com/JasonLovesDoggo/abacus/issues/new">create a GitHub issue.</a></p>
     <h1 id="api">API</h1>
+
+    <h2>Authentication & Rate Limiting</h2>
+
+    <p>Endpoints requiring administrative actions (delete, set, reset, update) need an admin key passed in the
+        `Authorization` header as a Bearer token. You get this admin key when creating a counter via <a href="#create">/create</a>.</p>
+
+    <p>Rate limiting is in place to ensure fair usage: 30 requests per IP address every 3 seconds.</p>
+
     <h2>Namespaces</h2>
-    <p>Namespaces are meant to avoid name collisions. You may specify a namespace during the creation of a key. It's
-        recommended to use the domain of the application as namespace to avoid collision with other websites.<br>If the
-        namespace is not specified the key is assigned to the <code>default</code> namespace. If your key resides in the
-        default namespace, you don't need to specify it.</p>
+
+    <p>Namespaces are used to avoid name collisions.
+        You can specify a namespace when creating a key.
+        It's recommended to use the domain of your app as the namespace to prevent conflicts with other websites.<br>If you don't
+        specify a namespace, the key is assigned to the <code>default</code> namespace.
+        You don't need to specify the `default` namespace in your requests.</p>
+
     <h2>Endpoints</h2>
+
     <p>
         All requests support <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">cross-origin
-        resource sharing</a> (CORS) and SSL.<br>
-<!--        You can use <a href="https://en.wikipedia.org/wiki/JSONP">JSONP</a> sending the callback parameter. JSONP-->
-<!--        requests will never fail, they will include the HTTP code in the response.<br> todo; add jsonP -->
-<!--        Also a 1x1 GIF image is supported sending <code>?img</code>.-->
+        resource sharing</a> (CORS) and SSL.
     </p>
+
     <p>Base API path: <a href="https://abacus.jasoncameron.dev" target="_blank">https://abacus.jasoncameron.dev</a></p>
-    <p>In the case of a server failure, the API will send:</p>
+
+    <p>In case of a server failure, the API will send:</p>
+
     <pre class="fail">⇒ 500 { "error": "Error description" }</pre>
-    <h3 class="endpoint">/get/:namespace?/:key</h3>
-    <p>Get the value of a key. Optionally specify the namespace.</p>
+
+    <h3 class="endpoint">/healthcheck</h3>
+    <p>Check the health and uptime of the API.</p>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/get/test" target="_blank">https://abacus.jasoncameron.dev/get/test</a>
-⇒ 200 { "value": 42 }
+<a href="https://abacus.jasoncameron.dev/healthcheck" target="_blank">GET /healthcheck</a>
+⇒ 200 { "status": "ok", "uptime": "1h23m45s" }</pre>
 
-<a href="https://abacus.jasoncameron.dev/get/mysite.com/test" target="_blank">https://abacus.jasoncameron.dev/get/mysite.com/test</a>
-⇒ 200 { "value": 24 }</pre>
-    <pre class="fail">
-<a href="https://abacus.jasoncameron.dev/get/nonexisting" target="_blank">https://abacus.jasoncameron.dev/get/nonexisting</a>
-⇒ 404 { "value": null }</pre>
-    <h3 class="endpoint">/set/:namespace?/:key?value=:value</h3>
-    <p>Set the value of a key. Optionally specify the namespace. The key <b>must</b> be created with
-        <code>enable_reset</code> set to <code>1</code> (true).</p>
-    <p>This endpoint will return the previous value before the assignation.</p>
+    <h3 class="endpoint">/docs</h3>
+    <p>Redirects to the API documentation.</p>
+
+    <h3 class="endpoint">/get/:namespace/*key</h3>
+    <p>Retrieve the current value of a counter. Optionally specify the namespace.</p>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/set/test?value=69" target="_blank">https://abacus.jasoncameron.dev/set/test?value=69</a>
-⇒ 200 { "old_value": 42, "value": 69 }
-
-<a href="https://abacus.jasoncameron.dev/set/mysite.com/test?value=96" target="_blank">https://abacus.jasoncameron.dev/set/mysite.com/test?value=96</a>
-⇒ 200 { "old_value": 24, "value": 96 }</pre>
+<a href="https://abacus.jasoncameron.dev/get/test" target="_blank">GET /get/test</a>
+⇒ 200 { "value": 42 }</pre>
     <pre class="fail">
-<a href="https://abacus.jasoncameron.dev/set/resetdisabled?value=33" target="_blank">https://abacus.jasoncameron.dev/set/resetdisabled?value=33</a>
-⇒ 403 { "old_value": 1234, "value": 1234 }
+<a href="https://abacus.jasoncameron.dev/get/nonexisting" target="_blank">GET /get/nonexisting</a>
+⇒ 404 { "error": "Key not found" }</pre>
 
-<a href="https://abacus.jasoncameron.dev/set/nonexisting?value=33" target="_blank">https://abacus.jasoncameron.dev/set/nonexisting?value=33</a>
-⇒ 404 { "old_value": null, "value": null }</pre>
-    <h3 class="endpoint">/update/:namespace?/:key?amount=:amount</h3>
-    <p>Updates a key with <code>+/- amount</code>. Optionally specify the namespace. The <code>amount</code> <b>must</b>
-        be within <code>update_lowerbound</code> and <code>update_upperbound</code> specified during the creation of the
-        key.</p>
+    <h3 class="endpoint">/hit/:namespace/*key</h3>
+    <p>Increment a counter by 1 and return the new value. If the counter doesn't exist, it will be created. Optionally
+        specify a namespace.</p>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/update/test?amount=5"
-   target="_blank">https://abacus.jasoncameron.dev/update/test?amount=5</a> (value was 42)
-⇒ 200 { "value": 47 }
-
-<a href="https://abacus.jasoncameron.dev/update/mysite.com/test?amount=-7" target="_blank">https://abacus.jasoncameron.dev/update/mysite.com/test?amount=-7</a> (value was 53)
-⇒ 200 { "value": 46 }</pre>
-    <pre class="fail">
-<a href="https://abacus.jasoncameron.dev/update/outofrange?amount=3" target="_blank">https://abacus.jasoncameron.dev/update/outofrange?amount=3</a> (value was 47, update_upperbound=2)
-⇒ 403 { "value": 47 }
-
-<a href="https://abacus.jasoncameron.dev/update/nonexisting?amount=1" target="_blank">https://abacus.jasoncameron.dev/update/nonexisting?amount=1</a>
-⇒ 404 { "value": null }</pre>
-            <h3 class="endpoint">/hit/:namespace?/:key</h3>
-            <p>An easier way to track incrementing by one keys. This endpoint will create a key if it doesn't exists and increment it by one on each subsequent request. Optionally specify a namespace.<br>The key created has the following properties:</p>
-            <ul>
-                <li><code>enable_reset</code> to <code>0</code> (false)</li>
-                <li><code>update_lowerbound</code> to <code>0</code></li>
-                <li><code>update_upperbound</code> to <code>1</code></li>
-            </ul>
-            <p>Effectively making the key only incrementable by one.</p>
-            <pre class="success">
-<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits"
-   target="_blank">https://abacus.jasoncameron.dev/hit/mysite.com/visits</a> (value was 35)
-⇒ 200 { "value": 36 }
-
-<a href="https://abacus.jasoncameron.dev/hit/nonexisting" target="_blank">https://abacus.jasoncameron.dev/hit/nonexisting</a> (key is created)
+<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits" target="_blank">GET /hit/mysite.com/visits</a> (value was 35)
+⇒ 200 { "value": 36 }</pre>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/hit/nonexisting" target="_blank">GET /hit/nonexisting</a> (key is created)
 ⇒ 200 { "value": 1 }</pre>
-    <h3 class="endpoint">/create</h3>
-    <p>Creates a key.<br>All parameters are optional</p>
-    <table>
-        <thead>
-        <tr>
-            <th>name</th>
-            <th>default</th>
-            <th>description</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <td>key</td>
-            <td>New UUID</td>
-            <td>Name of the key</td>
-        </tr>
-        <tr>
-            <td>namespace</td>
-            <td>default</td>
-            <td>Namespace to store the key</td>
-        </tr>
-        <tr>
-            <td>value</td>
-            <td>0</td>
-            <td>The initial value stored</td>
-        </tr>
-        <tr>
-            <td>enable_reset</td>
-            <td>0</td>
-            <td>Allows the key to be resetted with <b>/set</b></td>
-        </tr>
-        <tr>
-            <td>update_lowerbound</td>
-            <td>-1</td>
-            <td>Restrict update to not subtract more than this number. This number <b>must</b> be negative or zero.</td>
-        </tr>
-        <tr>
-            <td>update_upperbound</td>
-            <td>1</td>
-            <td>Restrict update to not add more than this number. This number <b>must</b> be positive or zero.</td>
-        </tr>
-        </tbody>
-    </table>
+
+    <h3 class="endpoint">/stream/:namespace/*key</h3>
+    <p>Stream updates to a counter's value using Server-Sent Events (SSE). Optionally specify a namespace.</p>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/stream/mysite.com/visits" target="_blank">GET /stream/mysite.com/visits</a>
+⇒ data: {"value": 36}
+</pre>
+
+    <h3 id="create" class="endpoint">/create/:namespace/*key</h3>
+    <p>Create a new counter with an optional initial value (default 0). Specify both namespace and key. </p>
+    <pre class="info">Note about <b>admin_key</b>: this is the only time you will be able to see it, if you lose the key then you lose access to control the counter. </pre>
+
     <pre class="info">Note about <b>expiration</b>: Every time a key is updated its expiration is set to <b>6 months</b>. So don't worry, if you still using it, it won't expire.</pre>
-    <pre class="info" id="format">Keys and namespaces must have at least 3 characters and less or equal to 64. Keys and namespaces must match: <b>^[A-Za-z0-9_\-.]{3,64}$</b></pre>
+    <pre class="info" id="format">Keys and namespaces must have at least 3 characters and less or equal to 64. Keys and namespaces must match: <b>^[A-Za-z0-9_-.]{3,64}$</b></pre>
+    <br/>
+
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/create" target="_blank">https://abacus.jasoncameron.dev/create</a>
-⇒ 200 {"namespace":"default", "key":"6d5891ff-ebda-48fb-a760-8549d6a3bf3a", "value":0}
-
-<a href="https://abacus.jasoncameron.dev/create?namespace=mysite.com&value=42" target="_blank">https://abacus.jasoncameron.dev/create?namespace=mysite.com&value=42</a>
-⇒ 200 {"namespace":"mysite.com", "key":"33606dbe-4800-4228-b042-5c0fb8ec8f08", "value":42}
-
-<a href="https://abacus.jasoncameron.dev/create?key=counter&expiration=60" target="_blank">https://abacus.jasoncameron.dev/create?key=counter&expiration=60</a>
-⇒ 200 { "namespace": "default", "key":"counter", "value": 0 }</pre>
+GET create/myapp/newcounter?initializer=10
+⇒ 201 {"key": "newcounter", "namespace": "myapp", "admin_key": "YOUR_ADMIN_KEY", "value": 10}</pre>
     <pre class="fail">
-<a href="https://abacus.jasoncameron.dev/create?name=alreadycreated" target="_blank">https://abacus.jasoncameron.dev/create?name=alreadycreated</a> (the key already existed)
-⇒ 409 { "namespace": null, "key": null, "value": null }</pre>
-    <h3 class="endpoint">/info/:namespace?/:key</h3>
-    <p>Get information about a key. Optionally specify the namespace.</p>
+GET /create/myapp/alreadyexists
+⇒ 409 { "error": "Key already exists, please use a different key." }</pre>
+
+
+
+    <h3 class="endpoint">/create/</h3>
+    <p>Create a new counter with a random namespace and key. This endpoint does not take any parameters.</p>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/info/test" target="_blank">https://abacus.jasoncameron.dev/info/test</a>
+GET /create
+⇒ 201 {"key": "randomkey", "namespace": "randomnamespace", "admin_key": "YOUR_ADMIN_KEY", "value": 0}</pre>
+
+    <h3 class="endpoint">/info/:namespace/*key</h3>
+    <p>Get detailed information about a counter, including its value, key, expiration, etc. Optionally specify the
+        namespace.</p>
+    <pre class="success">
+GET /info/existing
 ⇒ 200 {
-    "namespace": "default",
-    "key": "test",
-    "ttl": 321,
-    "value": 42,
-    "enable_reset": false,
-    "update_upperbound": 1,
-    "update_lowerbound": 1
+    "value": 42,           // Current counter value
+    "full_key": "default:existing", // The full Redis key (namespace:key)
+    "is_genuine": true,   // Indicates if the counter was created with an admin key (false) or not (true)
+    "expires_in": 172800, // Time to live (TTL) in seconds
+    "expires_str": "2d",   // TTL in a human-readable format
+    "exists": true        // Whether the key exists in the DB
 }</pre>
     <pre class="fail">
-<a href="https://abacus.jasoncameron.dev/info/nonexisting" target="_blank">https://abacus.jasoncameron.dev/info/nonexisting</a>
+GET /info/nonexisting
 ⇒ 404 {
-    "namespace": null,
-    "key": null,
-    "ttl": null,
-    "value": null,
-    "enable_reset": null,
-    "update_upperbound": null,
-    "update_lowerbound": null
+    "value": -1,
+    "full_key": "default:nonexisting",
+    "is_genuine": true,
+    "expires_in": -2e-9,
+    "expires_str": "-2ns", // When the server received the request compared to when it output a response.
+    "exists": false
 }</pre>
-    <h3 class="endpoint">/stats</h3>
-    <p>Get some CountAPI stats</p>
+
+
+    <h3 class="endpoint">/delete/:namespace/*key (Requires Admin Key)</h3>
+    <p>Delete a counter. Specify both namespace and key. Include the admin key in the `Authorization` header.</p>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/stats" target="_blank">https://abacus.jasoncameron.dev/stats</a>
-⇒ 200 {
-    "keys_created": <span data-stat-id="keys_created">...</span>,
-    "keys_updated": <span data-stat-id="keys_updated">...</span>,
-    "requests": <span data-stat-id="requests">...</span>,
-    "version": "<span data-stat-id="version">...</span>"
-}</pre>
+POST /delete/myapp/mycounter
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 200 { "status": "ok", "message": "Deleted key: myapp:mycounter" }
+</pre>
+
+
+    <h3 class="endpoint">/set/:namespace/*key?value=:value (Requires Admin Key)</h3>
+    <p>Set the value of a counter, overwriting the existing value. Specify both namespace and key, and provide the
+        `value` query parameter. Include the admin key in the `Authorization` header.</p>
+    <pre class="success">
+POST /set/myapp/mycounter?value=15
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 200 { "value": 15 }
+</pre>
+    <pre class="fail">
+POST /set/myapp/nonexisting?value=15
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 404 { "error": "Key does not exist, please use a different key." }
+</pre>
+
+    <h3 class="endpoint">/reset/:namespace/*key (Requires Admin Key)</h3>
+    <p>Reset a counter to 0. Specify both namespace and key. Include the admin key in the `Authorization` header.</p>
+    <pre class="success">
+POST /reset/myapp/mycounter
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 200 { "value": 0 }
+</pre>
+    <pre class="fail">
+POST /reset/myapp/nonexisting
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 404 { "error": "Key doesnot exist, please use a different key." }
+</pre>
+
+    <h3 class="endpoint">/update/:namespace/*key?value=:amount (Requires Admin Key)</h3>
+    <p>Increment or decrement a counter by the specified amount. Specify both namespace and key, and provide the value
+        query parameter (positive to increment, negative to decrement). Include the admin key in the Authorization
+        header.</p>
+    <pre class="success">
+POST /update/myapp/mycounter?value=5
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 200 { "value": 20 } // Assuming the previous value was 15
+</pre>
+    <pre class="fail">
+POST /update/myapp/nonexisting?value=-3
+Authorization: Bearer YOUR_ADMIN_KEY
+⇒ 404 { "error": "Key does not exist, please first create it using /create." }
+</pre>
+
+
+
+
     <footer>
         made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
                 href="https://countapi.xyz">CountAPI</a>.

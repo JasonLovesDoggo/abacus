@@ -46,7 +46,7 @@ func init() {
 	})
 }
 
-func StreamValueView(c *gin.Context) {
+func StreamValueView(c *gin.Context) {     // todo: fix hanging when key does not exist
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
 		return
@@ -155,8 +155,8 @@ func GetView(c *gin.Context) {
 	go func() {
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
-
-	c.JSON(http.StatusOK, gin.H{"value": val})
+    intval, _ := strconv.Atoi(val)
+	c.JSON(http.StatusOK, gin.H{"value": intval})
 }
 
 
