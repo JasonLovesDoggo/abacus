@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
@@ -32,21 +33,23 @@ func SetStream(dbKey string, value int) {
 	}
 }
 
+var DB_NUM int = 0
+
 func init() {
 	// Connect to Redis
 	utils.LoadEnv()
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	fmt.Println("Listening to redis on: " + ADDR)
-	PASS, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
+	DB_NUM, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
 		Username: os.Getenv("REDIS_USERNAME"),
 		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       PASS,
+		DB:       DB_NUM,
 	})
 }
 
-func StreamValueView(c *gin.Context) {     // todo: fix hanging when key does not exist
+func StreamValueView(c *gin.Context) { // todo: fix hanging when key does not exist
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
 		return
@@ -130,7 +133,6 @@ func HitView(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"value": val})
 }
 
-
 func GetView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
@@ -143,23 +145,20 @@ func GetView(c *gin.Context) {
 	// Get data from Redis
 	val, err := Client.Get(context.Background(), dbKey).Result()
 
-
-  if err == redis.Nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
-        return
-    } else if err != nil { // Other Redis errors
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
-        return
-    }
+	if err == redis.Nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
+		return
+	} else if err != nil { // Other Redis errors
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
 
 	go func() {
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
-    intval, _ := strconv.Atoi(val)
+	intval, _ := strconv.Atoi(val)
 	c.JSON(http.StatusOK, gin.H{"value": intval})
 }
-
-
 
 func CreateRandomView(c *gin.Context) {
 	key, _ := utils.GenerateRandomString(16)
@@ -344,4 +343,39 @@ func UpdateByView(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
 	go SetStream(dbKey, int(val))
+}
+
+func StatsView(c *gin.Context) {
+	// get average ttl using INFO
+
+	ctx := context.Background()
+	infoStr, err := Client.Info(ctx).Result()
+	if err != nil {
+		panic(err)
+	}
+
+	infoDict := make(map[string]map[string]string)
+	sections := strings.Split(infoStr, "\r\n\r\n")
+
+	for _, section := range sections {
+		lines := strings.Split(section, "\r\n")
+		sectionName := lines[0][2:] // Remove "# " prefix
+
+		infoDict[sectionName] = make(map[string]string)
+		for _, line := range lines[1:] {
+			parts := strings.Split(line, ":")
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				infoDict[sectionName][key] = value
+			}
+		}
+	}
+
+	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(DB_NUM)], ",")
+	keys := strings.Split(dbInfo[0], "=")
+	c.JSON(http.StatusOK, gin.H{"version": Version, "db_uptime": infoDict["Server"]["uptime_in_seconds"], "db_version": infoDict["Server"]["redis_version"], "expired_keys": infoDict["Stats"]["expired_keys"],
+		"key_misses": infoDict["Stats"]["keyspace_misses"],
+		"commands_processed": infoDict["Stats"]["total_commands_processed"], "keys": keys[1]})
+
 }

@@ -20,6 +20,8 @@ const DocsUrl string = "https://jasoncameron.dev/abacus/"
 
 var startTime time.Time
 
+const Version string = "1.0.0"
+
 func main() {
 	// only run the following if .env is present
 	utils.LoadEnv()
@@ -45,12 +47,12 @@ func main() {
 		context.JSON(http.StatusOK, gin.H{
 			"status": "ok", "uptime": time.Since(startTime).String()})
 	})
-    route.GET("/docs", func(context *gin.Context) {
-        context.Redirect(http.StatusPermanentRedirect, DocsUrl)
-    })
+	route.GET("/docs", func(context *gin.Context) {
+		context.Redirect(http.StatusPermanentRedirect, DocsUrl)
+	})
+	route.GET("/stats", StatsView)
 
-
-    route.GET("/get/:namespace/*key", GetView)
+	route.GET("/get/:namespace/*key", GetView)
 
 	route.GET("/hit/:namespace/*key", HitView)
 	route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)

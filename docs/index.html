@@ -223,9 +223,8 @@
     </p>
 
     <p>
-        So far, <code data-stat-id="keys_created">...</code> keys have been created and there have been <code
-            data-stat-id="requests">...</code> requests served being <code data-stat-id="keys_updated">...</code> key
-        updates.<br>
+        So far, <code data-stat-id="keys">...</code> keys have been created and there have been <code
+            data-stat-id="commands_processed">...</code> requests served. Abacus is currently on version <code data-stat-id="version">...</code>.<br>
         This page has been visited <code id="visits">...</code> times.
     </p>
     <h1 id="tldr">TL;DR</h1>
@@ -547,7 +546,20 @@ Authorization: Bearer YOUR_ADMIN_KEY
 </pre>
 
 
-
+    <h3 class="endpoint">/stats</h3>
+    <p>Gives some info about the server and database.</p>
+    <pre class="success">
+GET /stats
+⇒ 200 {
+  "commands_processed": "14911", // total requests
+  "db_uptime": "527154", // db uptime in seconds
+  "db_version": "6.0.16", // Redis version
+  "expired_keys": "438",  // N expired keys
+  "key_misses": "468", // Requests that returned 404 (key not found)
+  "keys": "75", // N active keys
+  "version": "1.0.0" // Abacus's current version
+}
+</pre>
 
     <footer>
         made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
@@ -580,6 +592,7 @@ Authorization: Bearer YOUR_ADMIN_KEY
                         for (var i in els)
                             els[i].innerText = str;
                     }
+                    document.querySelectorAll(`*[data-stat-id="keys"]`).innerText = obj["keys"] + obj["expired_keys"];
                 }
                 setTimeout(stats, 10000);
             });
