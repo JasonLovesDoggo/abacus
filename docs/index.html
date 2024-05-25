@@ -11,12 +11,12 @@
     <meta name="description"
           content="Abacus is a free counting service. You can use it to track page hits, and specific events among other things.">
     <meta name="keywords"
-          content="countapi, countapi.xyz, counting, count, api, abacus, free api, visitor count, hit counter, page counter, visitors">
+          content="countapi, countapi.xyz, counting, count, api, abacus, free api, visitor count, hit counter, page counter, visitors, number counter api">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Abacus">
     <meta property="og:title" content="Abacus">
     <meta property="og:description"
-          content="CountAPI is a free counting service. You can use it to track page hits, and specific events among other things.">
+          content="Abacus is a free counting service. You can use it to track page hits, and specific events among other things.">
     <meta property="og:url" content="https://abacus.jasoncameron.dev">
     <meta property="og:image" content="abacus.jasoncameron.dev/favicon.ico">
     <meta property="og:image:width" content="64">
@@ -254,7 +254,7 @@
 <!--        console.log(result.value);-->
 <!--        });-->
 <!--    </div>-->
-    <h4>Using JSONP</h4>
+  <!--  <h4>Using JSONP</h4>    todo: add jsonP support
     <div class="highlight html"> &lt;script&gt;
      function cb(response) {
          document.getElementById('visits').innerText = response.value;
@@ -268,7 +268,7 @@
  xhr.onload = function() {
     document.getElementById('visits').innerText = this.response.value;
  }
- xhr.send();</div>
+ xhr.send();</div>-->
     <h4>Using jQuery</h4>
     <div class="highlight js"> $.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
     function(response) {
@@ -282,7 +282,7 @@
         made from <code>https://mysite.com/example/page</code>:</p>
     <ul>
         <li><code>:HOST:</code> will be replaced with <code>mysite.com</code></li>
-        <li><code>:PATHNAME:</code> will be replaced with <code>examplepage</code></li> 
+        <li><code>:PATHNAME:</code> will be replaced with <code>examplepage</code></li>
         <pre class="info">Note: :PATHNAME: is only availible when the <code>Referer</code> header is set.</pre>
     </ul>
     <br>
