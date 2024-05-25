@@ -340,16 +340,15 @@ function clicked() {
     <h2>Is the API free?</h2>
     <p>Completely free.</p>
     <h2>Rate Limiting?</h2>
-    <p>Key retrieving and updating has <b>no</b> limits whatsoever. Key <b>creation</b> is limited to 20/IP/s.</p>
+    <p>Yes, there is a general ratelimit of 30/IP/3s. If you have an issue with this, shoot me an email @ <a href="mailto:abacus@jasoncameron.dev">abacus@jasoncameron.dev</a></p>
     <h2>Can I delete a key?</h2>
-    <p>You can't, just let the key expire.<br>If you created a key with a wrong configuration, you can always create
-        another key.</p>
+    <p>If you originally created the key using the /create endpoint, then yes you can delete the key and all data associated with it by using the /delete endpoint along with your admin key.</p>
     <h2>Will I blow up the CountAPI server?</h2>
     <p>CountAPI is using <a href="https://redis.io/" target="_blank">Redis</a> as a database, a rapid key-value
-        solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you ping me
-        letting me know.</p>
+        solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you <a
+                href="mailto:abacus@jasoncameron.dev">email me</a> letting me know.</p>
     <h2 id="contact">Issues/Contact</h2>
-    <p>If you have issues, suggestions or just want to contact me <a href="mailto:abacus@jasoncameron.dev" target="_blank">email me</a>.</p>
+    <p>If you have issues, suggestions or just want to contact me, shoot me <a href="mailto:abacus@jasoncameron.dev" target="_blank">an email</a> or <a href="https://github.com/JasonLovesDoggo/abacus/issues/new">create a GitHub issue.</a></p>
     <h1 id="api">API</h1>
     <h2>Namespaces</h2>
     <p>Namespaces are meant to avoid name collisions. You may specify a namespace during the creation of a key. It's
@@ -360,9 +359,9 @@ function clicked() {
     <p>
         All requests support <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">cross-origin
         resource sharing</a> (CORS) and SSL.<br>
-        You can use <a href="https://en.wikipedia.org/wiki/JSONP">JSONP</a> sending the callback parameter. JSONP
-        requests will never fail, they will include the HTTP code in the response.<br>
-        Also a 1x1 GIF image is supported sending <code>?img</code>.
+<!--        You can use <a href="https://en.wikipedia.org/wiki/JSONP">JSONP</a> sending the callback parameter. JSONP-->
+<!--        requests will never fail, they will include the HTTP code in the response.<br> todo; add jsonP -->
+<!--        Also a 1x1 GIF image is supported sending <code>?img</code>.-->
     </p>
     <p>Base API path: <a href="https://abacus.jasoncameron.dev" target="_blank">https://abacus.jasoncameron.dev</a></p>
     <p>In the case of a server failure, the API will send:</p>
