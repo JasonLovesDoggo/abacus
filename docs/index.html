@@ -549,7 +549,7 @@ Authorization: Bearer YOUR_ADMIN_KEY
     <h3 class="endpoint">/stats</h3>
     <p>Gives some info about the server and database.</p>
     <pre class="success">
-GET /stats
+GET /stats/
 ⇒ 200 {
   "commands_processed": "14911", // total requests
   "db_uptime": "527154", // db uptime in seconds
@@ -594,7 +594,6 @@ GET /stats
                     }
                     document.querySelectorAll(`*[data-stat-id="keys"]`).innerText = obj["keys"] + obj["expired_keys"];
                 }
-                setTimeout(stats, 10000);
             });
         }
 
