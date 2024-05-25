@@ -1,5 +1,6 @@
 name: Create and publish a Docker image then deploy it
 on:
+  workflow_dispatch:
   push:
     paths:
       - '**.go'
