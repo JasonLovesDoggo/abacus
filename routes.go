@@ -33,19 +33,19 @@ func SetStream(dbKey string, value int) {
 	}
 }
 
-var DB_NUM int = 0
+var DbNum int = 0
 
 func init() {
 	// Connect to Redis
 	utils.LoadEnv()
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	fmt.Println("Listening to redis on: " + ADDR)
-	DB_NUM, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
+	DbNum, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
 		Username: os.Getenv("REDIS_USERNAME"),
 		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       DB_NUM,
+		DB:       DbNum,
 	})
 }
 
@@ -372,7 +372,7 @@ func StatsView(c *gin.Context) {
 		}
 	}
 
-	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(DB_NUM)], ",")
+	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(DbNum)], ",")
 	keys := strings.Split(dbInfo[0], "=")
 	c.JSON(http.StatusOK, gin.H{"version": Version, "db_uptime": infoDict["Server"]["uptime_in_seconds"], "db_version": infoDict["Server"]["redis_version"], "expired_keys": infoDict["Stats"]["expired_keys"],
 		"key_misses":         infoDict["Stats"]["keyspace_misses"],
