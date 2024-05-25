@@ -21,7 +21,7 @@ I currently use it on my personal website to keep track of the number of visitor
 # Todos
 
 - [ ] Documentation
-- [x] ~~K8 Deployment~~ (GCP CloudRun + Redis on OCI)
+- [x] ~~K8 Deployment~~ (Render + Redis on OCI)
 - [ ] JSONP Support (https://gin-gonic.com/docs/examples/jsonp/)
 - [x] impl /create endpoint which creates a new counter initialized to 0 and returns a secret key that can be used to modify the counter via the following endpoints
   - [x] /delete endpoint
