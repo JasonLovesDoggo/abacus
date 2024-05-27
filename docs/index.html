@@ -21,7 +21,8 @@
     <meta property="og:image" content="abacus.jasoncameron.dev/favicon.ico">
     <meta property="og:image:width" content="64">
     <meta property="og:image:height" content="64">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/atom-one-dark.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
     <style>
         @import url("https://fonts.googleapis.com/css?family=Open+Sans:400,700");
@@ -215,7 +216,7 @@
         <li>Reset the value of a counter</li>
         <li>Increment/decrement a counter</li>
     </ul>
-    <p>All counters are accessible if you know the key and there are not private counters (yet?).</p>
+    <p>All counters are "unlisted"—accessible if you know the key but not publicly listed anywhere.</p>
 
     <p>
         Want to track the number of hits a page had? Sure.<br>
@@ -224,7 +225,8 @@
 
     <p>
         So far, <code data-stat-id="keys">...</code> keys have been created and there have been <code
-            data-stat-id="commands_processed">...</code> requests served. Abacus is currently on version <code data-stat-id="version">...</code>.<br>
+            data-stat-id="commands_processed">...</code> requests served. Abacus is currently on version <code
+            data-stat-id="version">...</code>.<br>
         This page has been visited <code id="visits">...</code> times.
     </p>
     <h1 id="tldr">TL;DR</h1>
@@ -244,35 +246,36 @@
     <pre class="info">Remember to change <input type="text" id="domain" value="mysite.com" maxlength="64"
                                                 autocomplete="off" autocorrect="off" autocapitalize="off"
                                                 spellcheck="false"> with your site's <b>domain</b>.</pre>
-<!--    <h4>Using <a href="https://www.npmjs.com/package/countapi-js" target="_blank">countapi-js <img alt="npm"-->
-<!--                                                                                                   src="https://img.shields.io/npm/v/countapi-js"></a>-->
-<!--    </h4>-->
-<!--    <div class="highlight js">import countapi from 'countapi-js';-->
+    <!--    <h4>Using <a href="https://www.npmjs.com/package/countapi-js" target="_blank">countapi-js <img alt="npm"-->
+    <!--                                                                                                   src="https://img.shields.io/npm/v/countapi-js"></a>-->
+    <!--    </h4>-->
+    <!--    <div class="highlight js">import countapi from 'countapi-js';-->
 
-<!--        countapi.visits().then((result) => {-->
-<!--        console.log(result.value);-->
-<!--        });-->
-<!--    </div>-->
-  <!--  <h4>Using JSONP</h4>    todo: add jsonP support
-    <div class="highlight html"> &lt;script&gt;
-     function cb(response) {
-         document.getElementById('visits').innerText = response.value;
-     }
- &lt;/script&gt;
- &lt;script async src="https://api.countapi.xyz/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
-    <h4>Using XHR</h4>
-    <div class="highlight js"> var xhr = new XMLHttpRequest();
- xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
- xhr.responseType = "json";
- xhr.onload = function() {
-    document.getElementById('visits').innerText = this.response.value;
- }
- xhr.send();</div>-->
+    <!--        countapi.visits().then((result) => {-->
+    <!--        console.log(result.value);-->
+    <!--        });-->
+    <!--    </div>-->
+    <!--  <h4>Using JSONP</h4>    todo: add jsonP support
+      <div class="highlight html"> &lt;script&gt;
+       function cb(response) {
+           document.getElementById('visits').innerText = response.value;
+       }
+   &lt;/script&gt;
+   &lt;script async src="https://api.countapi.xyz/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
+      <h4>Using XHR</h4>
+      <div class="highlight js"> var xhr = new XMLHttpRequest();
+   xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
+   xhr.responseType = "json";
+   xhr.onload = function() {
+      document.getElementById('visits').innerText = this.response.value;
+   }
+   xhr.send();</div>-->
     <h4>Using jQuery</h4>
     <div class="highlight js"> $.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
-    function(response) {
+        function(response) {
         $("#visits").text(response.value);
-    }); </div>
+        });
+    </div>
     <h3>Multiple pages</h3>
     <p>If you want to have a counter for each individual page you can replace <code>visits</code> with a unique
         identifier for each page, i.e. <code>index</code>, <code>contact</code>, <code>item-1234</code>. Check <a
@@ -290,43 +293,44 @@
     <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATHNAME:</a></pre>
     <p>Or even more generic (though not recommended):</p>
     <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:</a></pre>
-<!--    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>-->
+    <!--    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>-->
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, lets say:</p>
-            <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
-&lt;script&gt;
-function clicked() {
-    var xhr = new XMLHttpRequest();
+    <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
+        &lt;script&gt;
+        function clicked() {
+        var xhr = new XMLHttpRequest();
         xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
-    xhr.responseType = "json";
-    xhr.onload = function() {
+        xhr.responseType = "json";
+        xhr.onload = function() {
         alert(`This button has been clicked ${this.response.value} times!`);
-    }
-    xhr.send();
-}
-&lt;/script&gt;</div>
-            <button onclick="clicked()">Press Me!</button>
-            <script>
-            function clicked() {
-                var xhr = new XMLHttpRequest();
+        }
+        xhr.send();
+        }
+        &lt;/script&gt;
+    </div>
+    <button onclick="clicked()">Press Me!</button>
+    <script>
+        function clicked() {
+            var xhr = new XMLHttpRequest();
             xhr.open("GET", "https://abacus.jasoncameron.dev/hit/mysite.com/awesomeclick");
-                xhr.responseType = "json";
-                xhr.onload = function() {
-                    alert(`This button has been clicked ${this.response.value} times!`);
-                }
-                xhr.send();
+            xhr.responseType = "json";
+            xhr.onload = function () {
+                alert(`This button has been clicked ${this.response.value} times!`);
             }
-            </script>
-<!--    <h1 id="libraries">Libraries</h1>-->
-<!--    The official javascript promise based wrapper is available in <a href="https://www.npmjs.com/package/countapi-js"-->
-<!--                                                                     target="_blank">countapi-js <img alt="npm"-->
-<!--                                                                                                      src="https://img.shields.io/npm/v/countapi-js"></a>.-->
-<!--    <h1 id="roadmap">Roadmap</h1>-->
-<!--    <p>If you have any f, I have some ideas in mind:</p>-->
-<!--    <ul>-->
-<!--        <li>Enable batch creating/updating</li>-->
-<!--        <li>Float numbers?</li>-->
-<!--    </ul>-->
+            xhr.send();
+        }
+    </script>
+    <!--    <h1 id="libraries">Libraries</h1>-->
+    <!--    The official javascript promise based wrapper is available in <a href="https://www.npmjs.com/package/countapi-js"-->
+    <!--                                                                     target="_blank">countapi-js <img alt="npm"-->
+    <!--                                                                                                      src="https://img.shields.io/npm/v/countapi-js"></a>.-->
+    <!--    <h1 id="roadmap">Roadmap</h1>-->
+    <!--    <p>If you have any f, I have some ideas in mind:</p>-->
+    <!--    <ul>-->
+    <!--        <li>Enable batch creating/updating</li>-->
+    <!--        <li>Float numbers?</li>-->
+    <!--    </ul>-->
     <h1 id="faq">FAQ</h1>
     <h2>Where is the API documentation?</h2>
     <p><a href="#api">Scroll</a> a bit further.</p>
@@ -359,28 +363,32 @@ function clicked() {
         <li><code>Retry-After</code>: Number of ms to wait before retrying (included when rate limited).</li>
 
 
-
     </ul>
-       <h4>Rate Limit Exceeded</h4>
-    When you exceed the rate limit, the API will respond with a <code>429 Too Many Requests</code> status code response similar to:
+    <h4>Rate Limit Exceeded</h4>
+    When you exceed the rate limit, the API will respond with a <code>429 Too Many Requests</code> status code response
+    similar to:
     <pre style="margin-top: 1vh" class="success">{
     "error": "Too many requests. Try again in 2s"
 }
 </pre>
     <h2>Can I delete a key?</h2>
-    <p>If you originally created the key using the <a href="#create">/create endpoint</a>, then yes, you can delete the key and all data associated with it by using the /delete endpoint along with your admin key.</p>
+    <p>If you originally created the key using the <a href="#create">/create endpoint</a>, then yes, you can delete the
+        key and all data associated with it by using the /delete endpoint along with your admin key.</p>
     <h2>Will I blow up the CountAPI server?</h2>
     <p>CountAPI is using <a href="https://redis.io/" target="_blank">Redis</a> as a database, a rapid key-value
         solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you <a
                 href="mailto:abacus@jasoncameron.dev">email me</a> letting me know.</p>
     <h2 id="contact">Issues/Contact</h2>
-    <p>If you have issues, suggestions or just want to contact me, shoot me <a href="mailto:abacus@jasoncameron.dev" target="_blank">an email</a> or <a href="https://github.com/JasonLovesDoggo/abacus/issues/new">create a GitHub issue.</a></p>
+    <p>If you have issues, suggestions or just want to contact me, shoot me <a href="mailto:abacus@jasoncameron.dev"
+                                                                               target="_blank">an email</a> or <a
+            href="https://github.com/JasonLovesDoggo/abacus/issues/new">create a GitHub issue.</a></p>
     <h1 id="api">API</h1>
 
     <h2>Authentication & Rate Limiting</h2>
 
     <p>Endpoints requiring administrative actions (delete, set, reset, update) need an admin key passed in the
-        `Authorization` header as a Bearer token. You get this admin key when creating a counter via <a href="#create">/create</a>.</p>
+        `Authorization` header as a Bearer token. You get this admin key when creating a counter via <a href="#create">/create</a>.
+    </p>
 
     <p>Rate limiting is in place to ensure fair usage: 30 requests per IP address every 3 seconds.</p>
 
@@ -388,7 +396,8 @@ function clicked() {
 
     <p>Namespaces are used to avoid name collisions.
         You can specify a namespace when creating a key.
-        It's recommended to use the domain of your app as the namespace to prevent conflicts with other websites.<br>If you don't
+        It's recommended to use the domain of your app as the namespace to prevent conflicts with other websites.<br>If
+        you don't
         specify a namespace, the key is assigned to the <code>default</code> namespace.
         You don't need to specify the `default` namespace in your requests.</p>
 
@@ -436,7 +445,8 @@ function clicked() {
     <h3 class="endpoint">/stream/:namespace/*key</h3>
     <p>Stream updates to a counter's value using <a
             href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Receiving_events_from_the_server"
-            target="_blank">Server-Sent Events (SSE)</a>. This means you get updated right as a key is updated instead of having to poll.  Optionally specify a namespace.</p>
+            target="_blank">Server-Sent Events (SSE)</a>. This means you get updated right as a key is updated instead
+        of having to poll. Optionally specify a namespace.</p>
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/stream/mysite.com/visits" target="_blank">GET /stream/mysite.com/visits</a>
 ⇒ data: {"value": 36}
@@ -456,7 +466,6 @@ GET create/myapp/newcounter?initializer=10
     <pre class="fail">
 GET /create/myapp/alreadyexists
 ⇒ 409 { "error": "Key already exists, please use a different key." }</pre>
-
 
 
     <h3 class="endpoint">/create/</h3>
@@ -559,14 +568,16 @@ GET /stats/
 
     <footer>
         made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
-                href="https://countapi.xyz">CountAPI</a>.
+            href="https://countapi.xyz">CountAPI</a>.
     </footer>
     <script>
+        let formatter = Intl.NumberFormat('en', {notation: 'compact'});
         document.querySelectorAll('div.code').forEach(el => {
             // then highlight each
             hljs.highlightElement(el);
         });
-    function request(url, callback) {
+
+        function request(url, callback) {
             var req = new XMLHttpRequest();
             req.open("GET", url);
             req.responseType = 'json';
@@ -582,13 +593,9 @@ GET /stats/
         function stats() {
             request("https://abacus.jasoncameron.dev/stats", function (obj) {
                 if (obj) {
-                    for (var key in obj) {
-                        var els = document.querySelectorAll(`*[data-stat-id="${key}"]`);
-                        var str = obj[key].toLocaleString();
-                        for (var i in els)
-                            els[i].innerText = str;
-                    }
-                    document.querySelectorAll(`*[data-stat-id="keys"]`).innerText = obj["keys"] + obj["expired_keys"];
+                    Array.from(document.querySelectorAll(`*[data-stat-id="version"]`)).map(o => o.innerText = obj["version"].toLocaleString());
+                    Array.from(document.querySelectorAll(`*[data-stat-id="commands_processed"]`)).map(o => o.innerText = formatter.format(obj["commands_processed"]));
+                    Array.from(document.querySelectorAll(`*[data-stat-id="keys"]`)).map(o => o.innerText = formatter.format(parseInt(obj["keys"]) + parseInt(obj["expired_keys"])));
                 }
             });
         }
@@ -596,7 +603,7 @@ GET /stats/
         stats();
         request("https://abacus.jasoncameron.dev/hit/abacus/visits", function (obj) {
             if (obj) {
-                document.getElementById('visits').innerText = obj.value.toLocaleString();
+                document.getElementById('visits').innerText = formatter.format(parseInt(obj.value.toLocaleString()));
             }
         });
 
@@ -606,17 +613,17 @@ GET /stats/
             });
         }
 
-            hljs.configure({tabReplace:'    '});
-            document.addEventListener('DOMContentLoaded', function(event) {
-                updateDomain("mysite.com");
-                document.getElementById('domain').addEventListener('input', function(e) {
-                    e.target.value = e.target.value.replace('https://', '').replace('http://', '').replace(/[^A-Za-z0-9_\-.]/g, '');
-                    updateDomain(e.target.value);
-                });
-                document.querySelectorAll('div.highlight').forEach(function(block){
-                    hljs.highlightBlock(block);
-                });
+        hljs.configure({tabReplace: '    '});
+        document.addEventListener('DOMContentLoaded', function (event) {
+            updateDomain("mysite.com");
+            document.getElementById('domain').addEventListener('input', function (e) {
+                e.target.value = e.target.value.replace('https://', '').replace('http://', '').replace(/[^A-Za-z0-9_\-.]/g, '');
+                updateDomain(e.target.value);
             });
+            document.querySelectorAll('div.highlight').forEach(function (block) {
+                hljs.highlightBlock(block);
+            });
+        });
     </script>
 </section>
 </body>
