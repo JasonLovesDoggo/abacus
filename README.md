@@ -6,10 +6,12 @@
 1. Install Golang & Redis
 
 2. Run `go mod install` to install the dependencies
+                                                   
+3. Add a `.env` file to the root of the project (or set the environment variables manually) following the format specified in .env.example
 
-3. Run `air` (if installed) or `go build` to build and run the API locally.
+4. Run `air` (if installed) or `go build` to build and run the API locally.
 
-4. The API will be running on `http://0.0.0.0:8080` by default.
+5. The API will be running on `http://0.0.0.0:8080` by default.
 
 
 ## Introduction
