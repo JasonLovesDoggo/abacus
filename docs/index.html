@@ -255,13 +255,13 @@
     <!--        console.log(result.value);-->
     <!--        });-->
     <!--    </div>-->
-    <!--  <h4>Using JSONP</h4>    todo: add jsonP support
+    <h4>Using JSONP</h4>
       <div class="highlight html"> &lt;script&gt;
        function cb(response) {
            document.getElementById('visits').innerText = response.value;
        }
    &lt;/script&gt;
-   &lt;script async src="https://api.countapi.xyz/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
+   &lt;script async src="https://abacus.jasoncameron.dev/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
       <h4>Using XHR</h4>
       <div class="highlight js"> var xhr = new XMLHttpRequest();
    xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
@@ -269,7 +269,7 @@
    xhr.onload = function() {
       document.getElementById('visits').innerText = this.response.value;
    }
-   xhr.send();</div>-->
+   xhr.send();</div>
     <h4>Using jQuery</h4>
     <div class="highlight js"> $.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
         function(response) {
@@ -425,6 +425,8 @@
 
     <h3 class="endpoint">/get/:namespace/*key</h3>
     <p>Retrieve the current value of a counter. Optionally specify the namespace.</p>
+    <pre class="info">If you want to use JSONP, please pass in the callback via the ?callback query param (e.g. ?callback=myjsfunction) </pre>
+
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/get/test" target="_blank">GET /get/test</a>
 ⇒ 200 { "value": 42 }</pre>
@@ -434,7 +436,11 @@
 
     <h3 class="endpoint">/hit/:namespace/*key</h3>
     <p>Increment a counter by 1 and return the new value. If the counter doesn't exist, it will be created. Optionally
-        specify a namespace.</p>
+        specify a namespace</p>
+
+    <pre class="info">If you want to use JSONP, please pass in the callback via the ?callback query param (e.g. ?callback=myjsfunction) </pre>
+
+
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits" target="_blank">GET /hit/mysite.com/visits</a> (value was 35)
 ⇒ 200 { "value": 36 }</pre>

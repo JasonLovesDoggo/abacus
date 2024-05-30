@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -129,8 +130,13 @@ func HitView(c *gin.Context) {
 		SetStream(dbKey, int(val))
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
+	if c.Query("callback") != "" {
+		c.JSONP(http.StatusOK, gin.H{"value": val})
 
-	c.JSON(http.StatusOK, gin.H{"value": val})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"value": val})
+
+	}
 }
 
 func GetView(c *gin.Context) {
@@ -145,7 +151,7 @@ func GetView(c *gin.Context) {
 	// Get data from Redis
 	val, err := Client.Get(context.Background(), dbKey).Result()
 
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
 		return
 	} else if err != nil { // Other Redis errors
@@ -157,7 +163,13 @@ func GetView(c *gin.Context) {
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
 	intval, _ := strconv.Atoi(val)
-	c.JSON(http.StatusOK, gin.H{"value": intval})
+	if c.Query("callback") != "" {
+		c.JSONP(http.StatusOK, gin.H{"value": intval})
+
+	} else {
+		c.JSON(http.StatusOK, gin.H{"value": intval})
+
+	}
 }
 
 func CreateRandomView(c *gin.Context) {
@@ -187,10 +199,6 @@ func CreateView(c *gin.Context) {
 	}
 	// Get data from Redis
 	created := Client.SetNX(context.Background(), dbKey, initialValue, utils.BaseTTLPeriod)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
-		return
-	}
 	if created.Val() == false {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key already exists, please use a different key."})
 		return
