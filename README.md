@@ -20,7 +20,7 @@ I currently use it on my personal website to keep track of the number of visitor
 
 # Todos
 
-- [x] Documentation
+- [x] Documentation (https://abacus.jasoncameron.dev)
 - [x] ~~K8 Deployment~~ (Render + Redis on OCI)
 - [x] JSONP Support (https://gin-gonic.com/docs/examples/jsonp/)
 - [x] impl /create endpoint which creates a new counter initialized to 0 and returns a secret key that can be used to modify the counter via the following endpoints
