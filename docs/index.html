@@ -283,15 +283,14 @@
         made from <code>https://mysite.com/example/page</code>:</p>
     <ul>
         <li><code>:HOST:</code> will be replaced with <code>mysite.com</code></li>
-        <li><code>:PATHNAME:</code> will be replaced with <code>examplepage</code></li>
-        <pre style="margin-top: 1vh" class="info">Note: :PATHNAME: is only availible when the <code>Referer</code> header is set.</pre>
+        <li><code>:PATH:</code> will be replaced with <code>examplepage</code></li>
     </ul>
     <br>
     <pre class="info">Note: Reserved words are left padded with dots if their length is less than three.</pre>
     <p>So you could use something like:</p>
-    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATHNAME:</a></pre>
+    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/mysite.com/:PATH:" target="_blank">https://abacus.jasoncameron.dev/hit/<code>mysite.com</code>/:PATH:</a></pre>
     <p>Or even more generic (though not recommended):</p>
-    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:" target="_blank">https://abacus.jasoncameron.dev/hit/:HOST:/:PATHNAME:</a></pre>
+    <pre class="success"><a href="https://abacus.jasoncameron.dev/hit/:HOST:/:PATH:" target="_blank">https://abacus.jasoncameron.dev/hit/:HOST:/:PATH:</a></pre>
     <!--    <pre class="info"><b>Important</b>: if you want to know the actual key used you can check the <code>X-Path</code> header.</pre>-->
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, lets say:</p>
