@@ -28,7 +28,7 @@ const (
 var (
 	Client          *redis.Client
 	RateLimitClient *redis.Client
-	DbNum           int = 0
+	DbNum           uint8 = 0 // 0-16
 	startTime       time.Time
 )
 
