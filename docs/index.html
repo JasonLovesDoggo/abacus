@@ -236,7 +236,7 @@
     </p>
     <p>The <b>hit</b> endpoint provides increment by one counters directly. Each time its requested the counter will
         increase by one:</p>
-    <pre class="success" style="font-size: 18px">
+    <pre class="success" style="font-size: 1em">
 <a href="https://abacus.jasoncameron.dev/hit/namespace/key" target="_blank">https://abacus.jasoncameron.dev/hit/<code>namespace</code>/<code>key</code></a>⇒ 200 { "value": 1234 }</pre>
     <p>Want to start counting right away? Check the examples below!</p>
     <h1 id="example">Example</h1>
@@ -246,12 +246,12 @@
                                                 autocomplete="off" autocorrect="off" autocapitalize="off"
                                                 spellcheck="false"> with your site's <b>domain</b>.</pre>
     <h4>Using JSONP</h4>
-      <div class="highlight html"> &lt;script&gt;
-       function cb(response) {
-           document.getElementById('visits').innerText = response.value;
-       }
-   &lt;/script&gt;
-   &lt;script async src="https://abacus.jasoncameron.dev/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
+      <div class="highlight html">&lt;script&gt;
+function cb(response) {
+    document.getElementById('visits').innerText = response.value;
+}
+&lt;/script&gt;
+&lt;script async src="https://abacus.jasoncameron.dev/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
       <h4>Using XHR</h4>
       <div class="highlight js"> var xhr = new XMLHttpRequest();
    xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
@@ -261,10 +261,10 @@
    }
    xhr.send();</div>
     <h4>Using jQuery</h4>
-    <div class="highlight js"> $.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
-        function(response) {
+    <div class="highlight js">$.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
+    function(response) {
         $("#visits").text(response.value);
-        });
+});
     </div>
     <h3>Multiple pages</h3>
     <p>If you want to have a counter for each individual page you can replace <code>visits</code> with a unique
@@ -286,22 +286,22 @@
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, lets say:</p>
     <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
-        &lt;script&gt;
-        function clicked() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
-        xhr.responseType = "json";
-        xhr.onload = function() {
+&lt;script&gt;
+function clicked() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
+    xhr.responseType = "json";
+    xhr.onload = function() {
         alert(`This button has been clicked ${this.response.value} times!`);
-        }
-        xhr.send();
-        }
-        &lt;/script&gt;
+    }
+    xhr.send();
+}
+&lt;/script&gt;
     </div>
     <button onclick="clicked()">Press Me!</button>
     <script>
         function clicked() {
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.open("GET", "https://abacus.jasoncameron.dev/hit/mysite.com/awesomeclick");
             xhr.responseType = "json";
             xhr.onload = function () {
@@ -579,9 +579,18 @@ GET /stats/
         function stats() {
             request("https://abacus.jasoncameron.dev/stats", function (obj) {
                 if (obj) {
-                    Array.from(document.querySelectorAll(`*[data-stat-id="version"]`)).map(o => o.innerText = obj["version"].toLocaleString());
-                    Array.from(document.querySelectorAll(`*[data-stat-id="commands_processed"]`)).map(o => o.innerText = formatter.format(obj["commands_processed"]));
-                    Array.from(document.querySelectorAll(`*[data-stat-id="keys"]`)).map(o => o.innerText = formatter.format(parseInt(obj["keys"]) + parseInt(obj["expired_keys"])));
+                    const commands = parseInt(obj["commands_processed"]);
+                    const keys = parseInt(obj["keys"]) + parseInt(obj["expired_keys"]);
+
+                    Array.from(document.querySelectorAll(`*[data-stat-id="version"]`)).map(o => o.innerText = obj["version"]);
+                    Array.from(document.querySelectorAll(`*[data-stat-id="commands_processed"]`)).map(o => {
+                        o.innerText = formatter.format(commands)
+                        o.title = `${commands.toLocaleString()} requests served`
+                    });
+                    Array.from(document.querySelectorAll(`*[data-stat-id="keys"]`)).map(o => {
+                        o.innerText = formatter.format(keys)
+                        o.title = `${keys.toLocaleString()} keys created`
+                    });
                 }
             });
         }
@@ -590,6 +599,8 @@ GET /stats/
         request("https://abacus.jasoncameron.dev/hit/abacus/visits", function (obj) {
             if (obj) {
                 document.getElementById('visits').innerText = formatter.format(parseInt(obj.value.toLocaleString()));
+                document.getElementById('visits').title = `${parseInt(obj.value).toLocaleString()} visits`
+
             }
         });
 
