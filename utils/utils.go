@@ -64,8 +64,11 @@ func CreateRawAdminKey(c *gin.Context) string {
 }
 func CreateKey(c *gin.Context, namespace, key string, skipValidation bool) string {
 	namespace = convertReserved(c, namespace)
+	if namespace == "" {
+		return ""
+	}
 	key = convertReserved(c, key)
-	if key == "" || namespace == "" {
+	if key == "" {
 		return ""
 	}
 	if skipValidation == false {
