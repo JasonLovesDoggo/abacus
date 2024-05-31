@@ -11,7 +11,7 @@
     <meta name="description"
           content="Abacus is a free counting service. You can use it to track page hits, and specific events among other things.">
     <meta name="keywords"
-          content="countapi, countapi.xyz, counting, count, api, abacus, free api, visitor count, hit counter, page counter, visitors, number counter api">
+          content="countapi, countapi.xyz, counting, count, api, abacus, free api, visitor count, hit counter, page counter, visitors, number counter api, countapi replacement">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Abacus">
     <meta property="og:title" content="Abacus">
@@ -205,7 +205,7 @@
     <h2 class="legend">Counting should be easy, right?</h2>
 </header>
 <section class="container">
-    <h1 id="countapi">Abacus</h1>
+    <h1 id="abacus">Abacus</h1>
     <p>
         This API allows you to create simple numeric counters. IaaS, Integer as a Service.
     </p>
@@ -245,15 +245,6 @@
     <pre class="info">Remember to change <input type="text" id="domain" value="mysite.com" maxlength="64"
                                                 autocomplete="off" autocorrect="off" autocapitalize="off"
                                                 spellcheck="false"> with your site's <b>domain</b>.</pre>
-    <!--    <h4>Using <a href="https://www.npmjs.com/package/countapi-js" target="_blank">countapi-js <img alt="npm"-->
-    <!--                                                                                                   src="https://img.shields.io/npm/v/countapi-js"></a>-->
-    <!--    </h4>-->
-    <!--    <div class="highlight js">import countapi from 'countapi-js';-->
-
-    <!--        countapi.visits().then((result) => {-->
-    <!--        console.log(result.value);-->
-    <!--        });-->
-    <!--    </div>-->
     <h4>Using JSONP</h4>
       <div class="highlight html"> &lt;script&gt;
        function cb(response) {
@@ -319,16 +310,6 @@
             xhr.send();
         }
     </script>
-    <!--    <h1 id="libraries">Libraries</h1>-->
-    <!--    The official javascript promise based wrapper is available in <a href="https://www.npmjs.com/package/countapi-js"-->
-    <!--                                                                     target="_blank">countapi-js <img alt="npm"-->
-    <!--                                                                                                      src="https://img.shields.io/npm/v/countapi-js"></a>.-->
-    <!--    <h1 id="roadmap">Roadmap</h1>-->
-    <!--    <p>If you have any f, I have some ideas in mind:</p>-->
-    <!--    <ul>-->
-    <!--        <li>Enable batch creating/updating</li>-->
-    <!--        <li>Float numbers?</li>-->
-    <!--    </ul>-->
     <h1 id="faq">FAQ</h1>
     <h2>Where is the API documentation?</h2>
     <p><a href="#api">Scroll</a> a bit further.</p>
@@ -372,8 +353,8 @@
     <h2>Can I delete a key?</h2>
     <p>If you originally created the key using the <a href="#create">/create endpoint</a>, then yes, you can delete the
         key and all data associated with it by using the <a href="#delete"> /delete</a> endpoint along with your admin key.</p>
-    <h2>Will I blow up the CountAPI server?</h2>
-    <p>CountAPI is using <a href="https://redis.io/" target="_blank">Redis</a> as a database, a rapid key-value
+    <h2>Will I blow up the Abacus server?</h2>
+    <p>Abacus is using <a href="https://valkey.io/" target="_blank">Valkey</a> as a database, a rapid key-value
         solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you <a
                 href="mailto:abacus@jasoncameron.dev">email me</a> letting me know.</p>
     <h2 id="contact">Issues/Contact</h2>
@@ -485,7 +466,7 @@ GET /create
 GET /info/existing
 ⇒ 200 {
     "value": 42,           // Current counter value
-    "full_key": "default:existing", // The full Redis key (namespace:key)
+    "full_key": "K:default:existing", // The full DB key (K:namespace:key)
     "is_genuine": true,   // Indicates if the counter was created with an admin key (false) or not (true)
     "expires_in": 172800, // Time to live (TTL) in seconds
     "expires_str": "2d",   // TTL in a human-readable format
@@ -562,7 +543,7 @@ GET /stats/
 ⇒ 200 {
   "commands_processed": "14911", // total requests
   "db_uptime": "527154", // db uptime in seconds
-  "db_version": "6.0.16", // Redis version
+  "db_version": "6.0.16", // DB version
   "expired_keys": "438",  // N expired keys
   "key_misses": "468", // Requests that returned 404 (key not found)
   "keys": "75", // N active keys
@@ -571,8 +552,9 @@ GET /stats/
 </pre>
 
     <footer>
+        <h1 style="all: unset">
         made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
-            href="https://countapi.xyz">CountAPI</a>.
+            href="https://countapi.xyz">CountAPI</a>.</h1>
     </footer>
     <script>
         let formatter = Intl.NumberFormat('en', {notation: 'compact'});
