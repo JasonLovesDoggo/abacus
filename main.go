@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jasonlovesdoggo/abacus/middleware"
@@ -16,11 +18,37 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const DocsUrl string = "https://jasoncameron.dev/abacus/"
+const (
+	DocsUrl string = "https://jasoncameron.dev/abacus/"
+	Version string = "1.1.0"
+)
 
-var startTime time.Time
+var (
+	Client          *redis.Client
+	RateLimitClient *redis.Client
+	DbNum           int = 0
+	startTime       time.Time
+)
 
-const Version string = "1.0.0"
+func init() {
+	// Connect to Redis
+	utils.LoadEnv()
+	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
+	fmt.Println("Listening to redis on: " + ADDR)
+	DbNum, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
+	Client = redis.NewClient(&redis.Options{
+		Addr:     ADDR, // Redis server address
+		Username: os.Getenv("REDIS_USERNAME"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       DbNum,
+	})
+	RateLimitClient = redis.NewClient(&redis.Options{
+		Addr:     ADDR, // Redis server address
+		Username: os.Getenv("REDIS_USERNAME"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       DbNum + 1,
+	})
+}
 
 func main() {
 	// only run the following if .env is present
@@ -34,7 +62,7 @@ func main() {
 		fmt.Println("Analytics enabled")
 	}
 	route := r.Group("")
-	route.Use(middleware.RateLimit(Client))
+	route.Use(middleware.RateLimit(RateLimitClient))
 
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {

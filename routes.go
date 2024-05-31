@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +19,6 @@ import (
 )
 
 var (
-	Client        *redis.Client
 	subscriberMap = make(map[string]chan int) // Map to store channels for each counter
 	mutex         sync.Mutex
 )
@@ -32,22 +30,6 @@ func SetStream(dbKey string, value int) {
 	if ok {
 		ch <- value
 	}
-}
-
-var DbNum int = 0
-
-func init() {
-	// Connect to Redis
-	utils.LoadEnv()
-	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-	fmt.Println("Listening to redis on: " + ADDR)
-	DbNum, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
-	Client = redis.NewClient(&redis.Options{
-		Addr:     ADDR, // Redis server address
-		Username: os.Getenv("REDIS_USERNAME"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       DbNum,
-	})
 }
 
 func StreamValueView(c *gin.Context) { // todo: fix hanging when key does not exist
