@@ -3,7 +3,7 @@ FROM golang:1.22@sha256:0b55ab82ac2a54a6f8f85ec8b943b9e470c39e32c109b766bbc1b801
 WORKDIR /src
 COPY . .
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./abacus
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./abacus -tags=jsoniter
 
 # Run stage
 FROM alpine:latest

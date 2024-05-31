@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jasonlovesdoggo/abacus/middleware"
 
@@ -33,6 +35,13 @@ var (
 func init() {
 	// Connect to Redis
 	utils.LoadEnv()
+
+	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	fmt.Println("Listening to redis on: " + ADDR)
 	DbNum, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
