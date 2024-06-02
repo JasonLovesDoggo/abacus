@@ -1,5 +1,14 @@
-# Abacus - A simple counting API written in Golang 
+# Abacus - A simple and free-to-use API for numerical counters
                                                                
+> Note: Abacus was designed as a direct replacement/upgrade for [CountAPI](https://countapi.xyz/) as it got taken down
+
+In order to get started, please visit the docs at https://abacus.jasoncameron.dev
+
+<!--
+## Key features
+- Blazing-Fast Performance: Powered by Golang and Valkey (fork of redis), Abacus delivers unparalleled speed and efficiency.
+- JSONP Support: Seamlessly integrate Abacus into your web applications with cross-origin resource sharing (CORS) support.
+-->
           
 # Installation
 
@@ -12,12 +21,6 @@
 4. Run `air` (if installed) or `go build` to build and run the API locally.
 
 5. The API will be running on `http://0.0.0.0:8080` by default.
-
-
-## Introduction
-Abacus is a simple counting API written in Golang. It is a simple REST API that allows you to create, read, update and delete counts. It is a simple project that I created to learn ~~Nim~~ Go and to get a feel for the language.
-I currently use it on my personal website to keep track of the number of visitors.
-
  
 
 # Todos
