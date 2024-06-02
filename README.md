@@ -1,4 +1,4 @@
-# Abacus - A simple and free-to-use API for numerical counters
+# Abacus - A highly-scaleable and stateless counting API
                                                                
 > Note: Abacus was designed as a direct replacement/upgrade for [CountAPI](https://countapi.xyz/) as it got taken down
 
