@@ -9,8 +9,13 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
 - Blazing-Fast Performance: Powered by Golang and Valkey (fork of redis), Abacus delivers unparalleled speed and efficiency.
 - JSONP Support: Seamlessly integrate Abacus into your web applications with cross-origin resource sharing (CORS) support.
 -->
+
+
+<br/>
+
+---
           
-# Installation
+### Development
 
 1. Install Golang & Redis
 
@@ -23,7 +28,7 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
 5. The API will be running on `http://0.0.0.0:8080` by default.
  
 
-# Todos
+## Todos
 
 - [x] Documentation (https://abacus.jasoncameron.dev)
 - [x] ~~K8 Deployment~~ (Render + Redis on OCI)
