@@ -362,7 +362,7 @@ func StatsView(c *gin.Context) {
 		}
 	}
 
-	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(DbNum)], ",")
+	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(int(DbNum))], ",")
 	keys := strings.Split(dbInfo[0], "=")
 	c.JSON(http.StatusOK, gin.H{"version": Version, "db_uptime": infoDict["Server"]["uptime_in_seconds"], "db_version": infoDict["Server"]["redis_version"], "expired_keys": infoDict["Stats"]["expired_keys"],
 		"key_misses":         infoDict["Stats"]["keyspace_misses"],
