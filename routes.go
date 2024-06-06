@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -362,10 +363,29 @@ func StatsView(c *gin.Context) {
 		}
 	}
 
-	dbInfo := strings.Split(infoDict["Keyspace"]["db"+strconv.Itoa(int(DbNum))], ",")
-	keys := strings.Split(dbInfo[0], "=")
-	c.JSON(http.StatusOK, gin.H{"version": Version, "db_uptime": infoDict["Server"]["uptime_in_seconds"], "db_version": infoDict["Server"]["redis_version"], "expired_keys": infoDict["Stats"]["expired_keys"],
-		"key_misses":         infoDict["Stats"]["keyspace_misses"],
-		"commands_processed": infoDict["Stats"]["total_commands_processed"], "keys": keys[1]})
+	total, _ := strconv.Atoi(Client.Get(ctx, "stats:Total").Val())
 
+	hits, _ := strconv.Atoi(Client.Get(ctx, "stats:hit").Val())
+	gets, _ := strconv.Atoi(Client.Get(ctx, "stats:get").Val())
+
+	create, _ := strconv.Atoi(Client.Get(ctx, "stats:create").Val())
+
+	totalKeys := create + (hits / 8)
+
+	c.JSON(http.StatusOK, gin.H{
+		"version":                     Version,
+		"uptime":                      time.Since(StartTime).String(),
+		"db_uptime":                   infoDict["Server"]["uptime_in_seconds"],
+		"db_version":                  infoDict["Server"]["redis_version"],
+		"expired_keys__since_restart": infoDict["Stats"]["expired_keys"],
+		"key_misses__since_restart":   infoDict["Stats"]["keyspace_misses"],
+		"commands": gin.H{
+			"total":  total,
+			"get":    gets,
+			"hit":    hits,
+			"create": create,
+		},
+		"total_keys": totalKeys,
+		"shard":      Shard,
+	})
 }

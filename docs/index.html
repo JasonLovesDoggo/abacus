@@ -236,7 +236,7 @@
 
     <p>
         So far, <code data-stat-id="keys">...</code> keys have been created and there have been <code
-            data-stat-id="commands_processed">...</code> requests served. Abacus is currently on version <code
+            data-stat-id="command_total">...</code> requests served. <code data-stat-id="hits">...</code> of those have been hits and <code data-stat-id="gets">...</code> have been gets. Abacus is currently on version <code
             data-stat-id="version">...</code>.<br>
         This page has been visited <code id="visits">...</code> times.
     </p>
@@ -554,13 +554,21 @@ Authorization: Bearer YOUR_ADMIN_KEY
     <pre class="success">
 GET /stats/
 ⇒ 200 {
-  "commands_processed": "14911", // total requests
-  "db_uptime": "527154", // db uptime in seconds
-  "db_version": "6.0.16", // DB version
-  "expired_keys": "438",  // N expired keys
-  "key_misses": "468", // Requests that returned 404 (key not found)
-  "keys": "75", // N active keys
-  "version": "1.0.0" // Abacus's current version
+  "commands": {
+    "create": 20394, // total number of /create's
+    "get": 403232,   // total number of /get's
+    "hit": 703232,   // total number of /hit's
+    "total": 2003058 // total number of requests served
+  },
+  "db_uptime": "5558", // database uptime in seconds
+  "db_version": "6.0.16", // database version
+  "expired_keys__since_restart": "130", // number of keys expired since db's last restart
+  "key_misses__since_restart": "205", // number of keys not found since db's last restart
+  "total_keys": 87904, // total number of keys created
+  "version": "1.1.0", // Abacus's version
+  "shard": "boujee-coorgi", // Handler shard
+  "uptime": "1h23m45s" // shard uptime
+
 }
 </pre>
 
@@ -592,14 +600,28 @@ GET /stats/
         function stats() {
             request("https://abacus.jasoncameron.dev/stats", function (obj) {
                 if (obj) {
-                    const commands = parseInt(obj["commands_processed"]);
-                    const keys = parseInt(obj["keys"]) + parseInt(obj["expired_keys"]);
+                    const commands = obj["commands"];
+                    const keys = obj["total_keys"];
 
                     Array.from(document.querySelectorAll(`*[data-stat-id="version"]`)).map(o => o.innerText = obj["version"]);
-                    Array.from(document.querySelectorAll(`*[data-stat-id="commands_processed"]`)).map(o => {
-                        o.innerText = formatter.format(commands)
-                        o.title = `${commands.toLocaleString()} requests served`
+
+
+                    Array.from(document.querySelectorAll(`*[data-stat-id="command_total"]`)).map(o => {
+                        o.innerText = formatter.format(commands["total"])
+                        o.title = `${commands["total"].toLocaleString()} requests served`
                     });
+
+                    Array.from(document.querySelectorAll(`*[data-stat-id="hits"]`)).map(o => {
+                        o.innerText = formatter.format(commands["hit"])
+                        o.title = `${commands["hit"].toLocaleString()} hits`
+                    });
+
+                    Array.from(document.querySelectorAll(`*[data-stat-id="gets"]`)).map(o => {
+                        o.innerText = formatter.format(commands["get"])
+                        o.title = `${commands["get"].toLocaleString()} gets`
+                    });
+
+
                     Array.from(document.querySelectorAll(`*[data-stat-id="keys"]`)).map(o => {
                         o.innerText = formatter.format(keys)
                         o.title = `${keys.toLocaleString()} keys created`

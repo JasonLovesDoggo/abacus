@@ -1,12 +1,19 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/anandvarma/namegen"
 
 	"github.com/redis/go-redis/v9"
 
@@ -28,12 +35,14 @@ const (
 var (
 	Client          *redis.Client
 	RateLimitClient *redis.Client
-	DbNum           uint8 = 0 // 0-16
-	startTime       time.Time
+	DbNum           = 0 // 0-16
+	StartTime       time.Time
+	Shard           string
 )
 
 func init() {
 	// Connect to Redis
+	Shard = namegen.New().Get()
 	utils.LoadEnv()
 
 	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
@@ -44,7 +53,7 @@ func init() {
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	fmt.Println("Listening to redis on: " + ADDR)
-	DbNum, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
+	DbNum, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
 		Username: os.Getenv("REDIS_USERNAME"),
@@ -61,8 +70,12 @@ func init() {
 
 func main() {
 	// only run the following if .env is present
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	utils.LoadEnv()
-	startTime = time.Now()
+	StartTime = time.Now()
+	utils.InitializeStats(Client)
 	// Initialize the Gin router
 	r := gin.Default()
 	r.Use(cors.Default())
@@ -72,6 +85,7 @@ func main() {
 	}
 	route := r.Group("")
 	route.Use(middleware.RateLimit(RateLimitClient))
+	route.Use(middleware.Stats())
 
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
@@ -82,7 +96,7 @@ func main() {
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
 	route.GET("/healthcheck", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{
-			"status": "ok", "uptime": time.Since(startTime).String()})
+			"status": "ok", "uptime": time.Since(StartTime).String()})
 	})
 	route.GET("/docs", func(context *gin.Context) {
 		context.Redirect(http.StatusPermanentRedirect, DocsUrl)
@@ -112,5 +126,37 @@ func main() {
 	authorized.POST("/update/:namespace/*key", UpdateByView)
 
 	// Run the server
-	_ = r.Run("0.0.0.0:" + os.Getenv("PORT"))
+
+	srv := &http.Server{
+		Addr:    ":" + os.Getenv("PORT"),
+		Handler: r,
+	}
+
+	go func() {
+		// service connections
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	// kill (no param) default send syscall.SIGTERM
+	// kill -2 is syscall.SIGINT
+	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	close(utils.ServerClose)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server Shutdown:", err)
+	}
+	select {
+	case <-ctx.Done():
+		log.Println("timeout of 5 seconds.")
+	}
+	log.Println("Server exiting")
 }
