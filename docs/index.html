@@ -633,8 +633,8 @@ GET /stats/
         stats();
         request("https://abacus.jasoncameron.dev/hit/abacus/visits", function (obj) {
             if (obj) {
-                document.getElementById('visits').innerText = formatter.format(parseInt(obj.value.toLocaleString()));
-                document.getElementById('visits').title = `${parseInt(obj.value).toLocaleString()} visits`
+                document.getElementById('visits').innerText = formatter.format(obj.value);
+                document.getElementById('visits').title = `${obj.value.toLocaleString()} visits`
 
             }
         });
