@@ -26,8 +26,10 @@ func formatPath(path string) string {
 func Stats() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		route := formatPath(c.Request.URL.Path)
+		utils.WriterLock.Lock()
 		utils.Total++
 		utils.CommonStats[route]++
+		utils.WriterLock.Unlock()
 		c.Next()
 
 	}
