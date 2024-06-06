@@ -379,7 +379,7 @@ func StatsView(c *gin.Context) {
 		"db_version":                  infoDict["Server"]["redis_version"],
 		"expired_keys__since_restart": infoDict["Stats"]["expired_keys"],
 		"key_misses__since_restart":   infoDict["Stats"]["keyspace_misses"],
-		"commands": gin.H{
+		"commands": map[string]int{
 			"total":  total,
 			"get":    gets,
 			"hit":    hits,
