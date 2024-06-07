@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -19,19 +18,12 @@ var (
 )
 
 func saveStats(client *redis.Client) {
-
-	fmt.Println("Saving stats...")
 	totalCopy := atomic.SwapInt64(&Total, 0)
 
-	fmt.Println("swapped totalCopy: ", totalCopy)
-
 	client.IncrBy(context.Background(), "stats:Total", totalCopy) // Capitalized to avoid conflict with a potential key named "total"
-	fmt.Println("Incremented totalCopy")
 	CommonStats.Range(func(key, value interface{}) bool {
-		fmt.Println("key: ", key)
 		oldValue, _ := CommonStats.Swap(key, new(int64))
 		oldValueNonPtr := *oldValue.(*int64)
-		fmt.Println("swapped - oldValue: ", oldValueNonPtr)
 		client.IncrBy(context.Background(), "stats:"+key.(string), oldValueNonPtr)
 		return true
 

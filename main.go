@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -52,7 +51,7 @@ func init() {
 	}
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-	fmt.Println("Listening to redis on: " + ADDR)
+	log.Println("Listening to redis on: " + ADDR)
 	DbNum, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
@@ -82,7 +81,7 @@ func main() {
 	r.Use(cors.Default())
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
-		fmt.Println("Analytics enabled")
+		log.Println("Analytics enabled")
 	}
 	route := r.Group("")
 	route.Use(middleware.Stats())
