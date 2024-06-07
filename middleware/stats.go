@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strings"
+	"sync/atomic"
 
 	"github.com/jasonlovesdoggo/abacus/utils"
 
@@ -26,10 +27,10 @@ func formatPath(path string) string {
 func Stats() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		route := formatPath(c.Request.URL.Path)
-		utils.WriterLock.Lock()
-		utils.Total++
-		utils.CommonStats[route]++
-		utils.WriterLock.Unlock()
+		atomic.AddInt64(&utils.Total, 1)
+		val, _ := (&utils.CommonStats).LoadOrStore(route, new(int64))
+		ptr := val.(*int64)
+		atomic.AddInt64(ptr, 1)
 		c.Next()
 
 	}

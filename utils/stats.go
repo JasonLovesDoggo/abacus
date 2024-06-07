@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -11,26 +13,29 @@ import (
 
 var (
 	Total       int64 = 0
-	CommonStats       = map[string]int64{}
-
-	WriterLock = sync.Mutex{}
+	CommonStats       = sync.Map{}
 
 	ServerClose = make(chan struct{})
 )
 
 func saveStats(client *redis.Client) {
-	WriterLock.Lock()
-	newTotal := Total
-	Total = 0 // reset the total
 
-	newStats := CommonStats
-	CommonStats = map[string]int64{} // reset the map
-	WriterLock.Unlock()
+	fmt.Println("Saving stats...")
+	totalCopy := atomic.SwapInt64(&Total, 0)
 
-	client.IncrBy(context.Background(), "stats:Total", newTotal) // Capitalized to avoid conflict with a potential key named "total"
-	for key, value := range newStats {
-		client.IncrBy(context.Background(), "stats:"+key, value)
-	}
+	fmt.Println("swapped totalCopy: ", totalCopy)
+
+	client.IncrBy(context.Background(), "stats:Total", totalCopy) // Capitalized to avoid conflict with a potential key named "total"
+	fmt.Println("Incremented totalCopy")
+	CommonStats.Range(func(key, value interface{}) bool {
+		fmt.Println("key: ", key)
+		oldValue, _ := CommonStats.Swap(key, new(int64))
+		oldValueNonPtr := *oldValue.(*int64)
+		fmt.Println("swapped - oldValue: ", oldValueNonPtr)
+		client.IncrBy(context.Background(), "stats:"+key.(string), oldValueNonPtr)
+		return true
+
+	})
 }
 
 func InitializeStats(client *redis.Client) {

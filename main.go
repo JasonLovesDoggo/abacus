@@ -69,6 +69,7 @@ func init() {
 }
 
 func main() {
+	//gin.SetMode(gin.ReleaseMode)
 	// only run the following if .env is present
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -84,9 +85,8 @@ func main() {
 		fmt.Println("Analytics enabled")
 	}
 	route := r.Group("")
-	route.Use(middleware.RateLimit(RateLimitClient))
 	route.Use(middleware.Stats())
-
+	route.Use(middleware.RateLimit(RateLimitClient))
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
 		c.Redirect(http.StatusPermanentRedirect, DocsUrl)
@@ -94,37 +94,42 @@ func main() {
 	// heath check
 	r.StaticFile("/favicon.svg", "./assets/favicon.svg")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
-	route.GET("/healthcheck", func(context *gin.Context) {
-		context.JSON(http.StatusOK, gin.H{
-			"status": "ok", "uptime": time.Since(StartTime).String()})
-	})
-	route.GET("/docs", func(context *gin.Context) {
-		context.Redirect(http.StatusPermanentRedirect, DocsUrl)
-	})
-	route.GET("/stats", StatsView)
 
-	route.GET("/get/:namespace/*key", GetView)
+	{ // Stats Routes
+		route.GET("/healthcheck", func(context *gin.Context) {
+			context.JSON(http.StatusOK, gin.H{
+				"status": "ok", "uptime": time.Since(StartTime).String()})
+		})
 
-	route.GET("/hit/:namespace/*key", HitView)
-	route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)
+		route.GET("/docs", func(context *gin.Context) {
+			context.Redirect(http.StatusPermanentRedirect, DocsUrl)
+		})
 
-	route.POST("/create/:namespace/*key", CreateView)
-	route.GET("/create/:namespace/*key", CreateView)
+		route.GET("/stats", StatsView)
+	}
+	{ // Public Routes
+		route.GET("/get/:namespace/*key", GetView)
 
-	route.GET("/create/", CreateRandomView)
-	route.POST("/create/", CreateRandomView)
+		route.GET("/hit/:namespace/*key", HitView)
+		route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)
 
-	route.GET("/info/:namespace/*key", InfoView)
+		route.POST("/create/:namespace/*key", CreateView)
+		route.GET("/create/:namespace/*key", CreateView)
 
+		route.GET("/create/", CreateRandomView)
+		route.POST("/create/", CreateRandomView)
+
+		route.GET("/info/:namespace/*key", InfoView)
+	}
 	authorized := route.Group("")
 	authorized.Use(middleware.Auth(Client))
+	{ // Authorized Routes
+		authorized.POST("/delete/:namespace/*key", DeleteView)
 
-	authorized.POST("/delete/:namespace/*key", DeleteView)
-
-	authorized.POST("/set/:namespace/*key", SetView)
-	authorized.POST("/reset/:namespace/*key", ResetView)
-	authorized.POST("/update/:namespace/*key", UpdateByView)
-
+		authorized.POST("/set/:namespace/*key", SetView)
+		authorized.POST("/reset/:namespace/*key", ResetView)
+		authorized.POST("/update/:namespace/*key", UpdateByView)
+	}
 	// Run the server
 
 	srv := &http.Server{
