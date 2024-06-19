@@ -1,4 +1,4 @@
-# Abacus - A highly-scaleable and stateless counting API
+# Abacus—A highly scalable and stateless counting API
                                                                
 > Note: Abacus was designed as a direct replacement/upgrade for [CountAPI](https://countapi.xyz/) as it got taken down
 
@@ -41,5 +41,5 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
 - [x] SSE Stream for the counters? Low priority.
 - [ ] Tests
 - [x] Rate limiting (max 30 requests per 3 second per IP address)
-- [ ] Create [Python](https://github.com/BenJetson/py-countapi) & [JS Wrappers](https://github.com/mlomb/countapi-js)
+- [ ] Create [Python](https://github.com/BenJetson/py-countapi), [JS Wrappers](https://github.com/mlomb/countapi-js) & Go client libraries
 
