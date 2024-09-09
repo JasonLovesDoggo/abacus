@@ -6,7 +6,7 @@ metadata:
     app: Abacus
 spec:
   containers:
-    - name: Abacus
+    - name: abacus
       image: ghcr.io/jasonlovesdoggo/abacus:main
       imagePullPolicy: Always
       ports:
