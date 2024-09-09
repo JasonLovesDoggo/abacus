@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: Abacus
+  labels:
+    app: Abacus
+spec:
+  containers:
+    - name: Abacus
+      image: ghcr.io/jasonlovesdoggo/abacus:main
+      imagePullPolicy: Always
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
