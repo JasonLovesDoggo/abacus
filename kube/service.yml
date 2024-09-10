@@ -7,6 +7,6 @@ spec:
     app: abacus
   ports:
     - protocol: TCP
-      port: 30080
+      port: 30393
       targetPort: 8080 # port Abacus listens on
 
