@@ -107,8 +107,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   type: "LoadBalancer"
-  loadBalancerIP:  #Deprecated in Kubernetes v1.24
-  externalTrafficPolicy:
+  externalTrafficPolicy: Cluster
   ports:
     - name: http
       port: 80
