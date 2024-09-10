@@ -122,6 +122,10 @@ func CreateAdminKey(key string) string {
 }
 
 func LoadEnv() {
+	// check if env was loaded via some other format
+	if os.Getenv("API_ANALYTICS_ENABLED") != "" {
+		return
+	}
 	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		log.Println("No .env file found")
 	} else {
