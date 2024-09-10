@@ -1,0 +1,203 @@
+# Source: caddy-ingress-controller/templates/poddisruptionbudget.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: caddy-caddy-ingress-controller
+  namespace: caddy-system
+  labels:
+    helm.sh/chart: caddy-ingress-controller-1.1.0
+    app.kubernetes.io/name: caddy-ingress-controller
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/version: "v0.2.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: caddy-ingress-controller
+      app.kubernetes.io/instance: caddy
+---
+# Source: caddy-ingress-controller/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caddy-ingress-controller
+  namespace: caddy-system
+  labels:
+    helm.sh/chart: caddy-ingress-controller-1.1.0
+    app.kubernetes.io/name: caddy-ingress-controller
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/version: "v0.2.1"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: caddy-ingress-controller/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-ingress-controller-configmap
+  namespace: caddy-system
+data:
+  acmeCA: ""
+  acmeEABKeyId: ""
+  acmeEABMacKey: ""
+  debug: "false"
+  email: "dns+abacus@jasoncameron.dev"
+  experimentalSmartSort: "false"
+  metrics: "true"
+  onDemandTLS: "false"
+  proxyProtocol: "false"
+---
+# Source: caddy-ingress-controller/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caddy-ingress-controller-role
+  namespace: caddy-system
+rules:
+  - apiGroups:
+      - ""
+      - "networking.k8s.io"
+      - "coordination.k8s.io"
+    resources:
+      - ingresses
+      - ingresses/status
+      - secrets
+      - leases
+    verbs: ["*"]
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - pods
+      - nodes
+      - routes
+      - extensions
+      - configmaps
+    verbs:
+      - list
+      - get
+      - watch
+---
+# Source: caddy-ingress-controller/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: caddy-ingress-controller-role-binding
+  namespace: caddy-system
+roleRef:
+  kind: ClusterRole
+  name: caddy-ingress-controller-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: caddy-ingress-controller
+    namespace: caddy-system
+---
+# Source: caddy-ingress-controller/templates/loadbalancer.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-caddy-ingress-controller
+  namespace: caddy-system
+  labels:
+    helm.sh/chart: caddy-ingress-controller-1.1.0
+    app.kubernetes.io/name: caddy-ingress-controller
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/version: "v0.2.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: "LoadBalancer"
+  loadBalancerIP:  #Deprecated in Kubernetes v1.24
+  externalTrafficPolicy:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/name: caddy-ingress-controller
+    app.kubernetes.io/instance: caddy
+---
+# Source: caddy-ingress-controller/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy-caddy-ingress-controller
+  namespace: caddy-system
+  labels:
+    helm.sh/chart: caddy-ingress-controller-1.1.0
+    app.kubernetes.io/name: caddy-ingress-controller
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/version: "v0.2.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: caddy-ingress-controller
+      app.kubernetes.io/instance: caddy
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: caddy-ingress-controller-1.1.0
+        app.kubernetes.io/name: caddy-ingress-controller
+        app.kubernetes.io/instance: caddy
+        app.kubernetes.io/version: "v0.2.1"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: caddy-ingress-controller
+      securityContext:
+        {}
+      containers:
+        - name: caddy-ingress-controller
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              add:
+                - NET_BIND_SERVICE
+              drop:
+                - ALL
+            runAsGroup: 0
+            runAsUser: 0
+          image: "caddy/ingress:v0.2.1"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: metrics
+              containerPort: 9765
+              protocol: TCP
+          resources:
+            {}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          args:
+            - -config-map=caddy-ingress-controller-configmap
+            - -class-name=caddy
+          readinessProbe:
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            httpGet:
+              port: 9765
+              path: /healthz
+      volumes:
+        - name: tmp
+          emptyDir: {}
