@@ -22,3 +22,6 @@ spec:
               memory: "512Mi" # Set memory limit to 512MB, adjust as needed
             requests:
               memory: "256Mi" # Set memory request to 256MB, adjust as needed
+          envFrom: # Use envFrom to reference the ConfigMap
+            - configMapRef:
+                name: abacus-config
