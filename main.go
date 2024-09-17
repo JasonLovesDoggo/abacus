@@ -78,7 +78,15 @@ func main() {
 	utils.InitializeStats(Client)
 	// Initialize the Gin router
 	r := gin.Default()
-	r.Use(cors.Default())
+	// Cors
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: false,
+		AllowAllOrigins:  true,
+		MaxAge:           12 * time.Hour,
+	}
+	r.Use(cors.New(corsConfig))
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
 		log.Println("Analytics enabled")
