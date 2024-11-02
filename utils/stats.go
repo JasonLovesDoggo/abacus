@@ -19,15 +19,18 @@ var (
 
 func saveStats(client *redis.Client) {
 	totalCopy := atomic.SwapInt64(&Total, 0)
-
-	client.IncrBy(context.Background(), "stats:Total", totalCopy) // Capitalized to avoid conflict with a potential key named "total"
+	pipe := client.Pipeline()
+	pipe.IncrBy(context.Background(), "stats:Total", totalCopy) // Capitalized to avoid conflict with a potential key named "total"
 	CommonStats.Range(func(key, value interface{}) bool {
 		oldValue, _ := CommonStats.Swap(key, new(int64))
 		oldValueNonPtr := *oldValue.(*int64)
-		client.IncrBy(context.Background(), "stats:"+key.(string), oldValueNonPtr)
+		pipe.IncrBy(context.Background(), "stats:"+key.(string), oldValueNonPtr)
 		return true
-
 	})
+	_, err := pipe.Exec(context.Background())
+	if err != nil {
+		log.Printf("Error saving stats: %v", err)
+	}
 }
 
 func InitializeStats(client *redis.Client) {
