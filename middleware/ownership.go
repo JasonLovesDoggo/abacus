@@ -31,6 +31,7 @@ func Auth(Client *redis.Client) gin.HandlerFunc {
 
 		} else if adminKey != authToken {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "token is invalid"})
+			c.Abort() // Abort further processing
 		} else { // token is valid.
 			c.Next()
 		}
