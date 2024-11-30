@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -19,79 +19,64 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	subscriberMap = make(map[string]chan int) // Map to store channels for each counter
-	mutex         sync.Mutex
-)
-
-func SetStream(dbKey string, value int) {
-	mutex.Lock()
-	ch, ok := subscriberMap[dbKey]
-	mutex.Unlock()
-	if ok {
-		ch <- value
-	}
-}
-
-func StreamValueView(c *gin.Context) { // todo: fix hanging when key does not exist
+func StreamValueView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
 	dbKey := utils.CreateKey(c, namespace, key, false)
 	if dbKey == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	// Create a channel for this counter's updates if not already created
-	mutex.Lock()
-	ch, ok := subscriberMap[dbKey]
-	if !ok {
-		ch = make(chan int)
-		subscriberMap[dbKey] = ch
-	}
-	mutex.Unlock()
 
-	// Listen for client disconnect
-	ctx, cancel := context.WithCancel(c.Request.Context())
+	// Initialize client channel
+	clientChan := make(chan int)
+
+	// Add this client to the event server for this specific key
+	utils.ValueEventServer.NewClients <- utils.KeyClientPair{
+		Key:    dbKey,
+		Client: clientChan,
+	}
+
 	defer func() {
-		cancel()
-		_ch, _ok := subscriberMap[dbKey]
-		if _ok {
-			mutex.Lock()
-			close(_ch)
-			delete(subscriberMap, dbKey)
-			mutex.Unlock()
+		// Drain client channel to prevent blocking
+		go func() {
+			for range clientChan {
+				// Drain client channel to prevent blocking
+			}
+		}()
+
+		// Remove this client from the event server
+		utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{
+			Key:    dbKey,
+			Client: clientChan,
 		}
 	}()
 
-	// Send initial count to a client
-	val := Client.Get(context.Background(), dbKey).Val()
-	if count, err := strconv.Atoi(val); err == nil {
-		message := fmt.Sprintf("{\"value\": %d}\n", count)
-		_, err := c.Writer.WriteString(message)
-		if err != nil {
-			return
-		}
+	// Send initial value
+	initialVal := Client.Get(context.Background(), dbKey).Val()
+	if count, err := strconv.Atoi(initialVal); err == nil {
+		c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
 		c.Writer.Flush()
 	}
 
-	// Stream count updates to the client
-	for {
+	// Stream updates
+	c.Stream(func(w io.Writer) bool {
 		select {
-		case <-ctx.Done():
-			return
-		case count, open := <-ch:
-			if !open {
-				return
+		case <-c.Request.Context().Done():
+			return false
+		case count, ok := <-clientChan:
+			if !ok {
+				return false
 			}
-			message := fmt.Sprintf("{\"value\": %d}\n", count)
-			_, err := c.Writer.WriteString(message)
-			if err != nil {
-				return
-			}
+			c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
 			c.Writer.Flush()
+			return true
 		}
-	}
+	})
 }
 
 func HitView(c *gin.Context) {
@@ -110,7 +95,7 @@ func HitView(c *gin.Context) {
 		return
 	}
 	go func() {
-		SetStream(dbKey, int(val))
+		utils.SetStream(dbKey, int(val))
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
 	if c.Query("callback") != "" {
@@ -188,6 +173,7 @@ func CreateView(c *gin.Context) {
 	}
 	AdminKey := uuid.New().String()                                            // Create a new admin key used for deletion and control
 	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0) // todo: figure out how to handle admin keys (handle alongside admin orrrrrrr separately as in a routine once a month that deletes all admin keys with no corresponding key)
+	utils.SetStream(dbKey, initialValue)
 	c.JSON(http.StatusCreated, gin.H{"key": key, "namespace": namespace, "admin_key": AdminKey, "value": initialValue})
 }
 
@@ -225,14 +211,7 @@ func DeleteView(c *gin.Context) {
 	Client.Del(context.Background(), dbKey)      // Delete the normal key
 	Client.Del(context.Background(), adminDBKey) // delete the admin key as it's now useless
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + dbKey})
-	// Close SSE stream
-	mutex.Lock()
-	ch, ok := subscriberMap[dbKey]
-	mutex.Unlock()
-	if ok {
-		close(ch)
-		delete(subscriberMap, dbKey)
-	}
+	utils.CloseStream(dbKey)
 }
 
 func SetView(c *gin.Context) {
@@ -265,7 +244,7 @@ func SetView(c *gin.Context) {
 	if val == false {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
 	} else {
-		go SetStream(dbKey, updatedValue)
+		go utils.SetStream(dbKey, updatedValue)
 		c.JSON(http.StatusOK, gin.H{"value": updatedValue})
 	}
 }
@@ -290,7 +269,7 @@ func ResetView(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please use a different key."})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"value": 0})
-		go SetStream(dbKey, 0)
+		go utils.SetStream(dbKey, 0)
 	}
 }
 
@@ -333,7 +312,7 @@ func UpdateByView(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
-	go SetStream(dbKey, int(val))
+	go utils.SetStream(dbKey, int(val))
 }
 
 func StatsView(c *gin.Context) {

@@ -1,37 +1,40 @@
 package middleware
 
 import (
+	"log"
 	"strings"
 	"sync/atomic"
 
-	"github.com/jasonlovesdoggo/abacus/utils"
-
 	"github.com/gin-gonic/gin"
+	"github.com/jasonlovesdoggo/abacus/utils"
 )
 
 func formatPath(path string) string {
-	path = path[1:]
-	path = strings.Split(path, "/")[0]
-	return path
+	if len(path) == 0 {
+		return ""
+	}
+	parts := strings.SplitN(path[1:], "/", 2)
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[0]
 }
-
-//func shouldSkip(path string) bool {
-//	switch path {
-//
-//	case "/favicon.ico", "/docs", "/", "favicon.svg":
-//		return true
-//	}
-//	return false
-//}
 
 func Stats() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		route := formatPath(c.Request.URL.Path)
-		atomic.AddInt64(&utils.Total, 1)
-		val, _ := (&utils.CommonStats).LoadOrStore(route, new(int64))
-		ptr := val.(*int64)
-		atomic.AddInt64(ptr, 1)
-		c.Next()
+		if utils.StatsManager == nil {
+			log.Fatal("StatsManager not initialized. Call InitializeStatsManager first")
+		}
 
+		path := formatPath(c.Request.URL.Path)
+		if path == "" {
+			c.Next()
+			return
+		}
+
+		atomic.AddInt64(&utils.Total, 1)
+		utils.StatsManager.RecordStat(path, 1)
+
+		c.Next()
 	}
 }
