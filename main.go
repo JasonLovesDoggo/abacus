@@ -87,6 +87,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}
 	r.Use(cors.New(corsConfig))
+	r.Use(gin.Recovery()) // recover from panics and returns a 500 error
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
 		log.Println("Analytics enabled")
