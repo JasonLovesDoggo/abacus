@@ -94,7 +94,10 @@ func main() {
 	}
 	route := r.Group("")
 	route.Use(middleware.Stats())
-	route.Use(middleware.RateLimit(RateLimitClient))
+	if os.Getenv("RATE_LIMIT_ENABLED") == "true" {
+		route.Use(middleware.RateLimit(RateLimitClient))
+		log.Println("Rate limiting enabled")
+	}
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
 		c.Redirect(http.StatusPermanentRedirect, DocsUrl)
