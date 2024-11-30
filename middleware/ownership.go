@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 
@@ -13,12 +14,21 @@ import (
 
 func Auth(Client *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authToken := c.DefaultQuery("token", "")
-		if authToken == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required, please provide a token in the format of ?token=ADMIN_TOKEN"})
-			c.Abort() // Abort further processing
-			return
+		authToken := ""
+		authTokenHeader := c.Request.Header.Get("Authorization")
+		if !strings.HasPrefix(authTokenHeader, "Bearer ") {
+			authTokenQuery := c.DefaultQuery("token", "")
+			if authTokenQuery == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required, " +
+					"please provide a token in the format of a Bearer token header or ?token=ADMIN_TOKEN"})
+				c.Abort() // Abort further processing
+				return
+			}
+			authToken = authTokenQuery
+		} else {
+			authToken = strings.TrimPrefix(authTokenHeader, "Bearer ")
 		}
+
 		adminDBKey := utils.CreateRawAdminKey(c)
 		//if adminDBKey == "" {
 		//	c.JSON(http.StatusInternalServerError, gin.H{"error": "There is no"})
