@@ -1,0 +1,60 @@
+name: Test Abacus
+on: 
+  push:
+    paths:
+      - '**.go'
+
+jobs:
+  # Label of the container job
+  container-job:
+    # Containers must run in Linux based operating systems
+    runs-on: ubuntu-latest
+    # Docker Hub image that `container-job` executes in
+    container: golang:latest
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # Downloads a copy of the code in your repository before running CI tests
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: go install
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Set redis env vars
+        run: |
+            export REDIS_HOST=redis
+            export REDIS_PORT=6379
+            export REDIS_USERNAME=
+            export REDIS_PASSWORD=
+            export REDIS_DB=0
+
+
+      - name: Run Unit tests
+        run: go test ./...
+
+      - name: Run k6 tests
+        run: k6 run --vus 10 --duration 30s ./tests/
+
+
+
