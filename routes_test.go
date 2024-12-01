@@ -7,14 +7,30 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/goccy/go-json"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	utils.LoadEnv()
+
+	if os.Getenv("TESTING") != "true" {
+		fmt.Println("Running tests in non-testing mode. Exiting...")
+		os.Exit(0)
+	}
+	if Client.Get(context.Background(), "K:stats:Total") != nil {
+		fmt.Println("Running tests on a non-empty database. Exiting...")
+		os.Exit(0)
+	}
+}
 
 // mockResponseWriter wraps httptest.ResponseRecorder to implement http.CloseNotifier.
 type mockResponseWriter struct {
