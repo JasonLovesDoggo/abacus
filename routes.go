@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -59,7 +61,11 @@ func StreamValueView(c *gin.Context) {
 	// Send initial value
 	initialVal := Client.Get(context.Background(), dbKey).Val()
 	if count, err := strconv.Atoi(initialVal); err == nil {
-		c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+		_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+		if err != nil {
+			log.Printf("Error writing to client: %v", err)
+			return
+		}
 		c.Writer.Flush()
 	}
 
@@ -72,7 +78,11 @@ func StreamValueView(c *gin.Context) {
 			if !ok {
 				return false
 			}
-			c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+			_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+			if err != nil {
+				log.Printf("Error writing to client: %v", err)
+				return false // Stream closed by client or server error
+			}
 			c.Writer.Flush()
 			return true
 		}
@@ -94,8 +104,15 @@ func HitView(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
+	// check if val is is greater than the max value of an int
+	if val > math.MaxInt {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Value is too large. Max value is " + strconv.Itoa(math.
+			MaxInt), "message": "If you are seeing this error and have a legitimate use case, please contact me @ abacus@jasoncameron.dev"})
+		return
+	}
 	go func() {
-		utils.SetStream(dbKey, int(val))
+		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
+		// see above) to ensure val is within the range of an int.
 		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
 	}()
 	if c.Query("callback") != "" {

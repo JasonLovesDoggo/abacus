@@ -173,7 +173,7 @@ func main() {
 	StartTime = time.Now()
 	// Initialize the Gin router
 	r := CreateRouter()
-	srv := &http.Server{
+	srv := &http.Server{ // #nosec G112 -- Due to the use of SSE endpoints, we cannot close the server early
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,
 	}
