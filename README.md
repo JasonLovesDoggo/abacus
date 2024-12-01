@@ -39,7 +39,7 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
   - [x] /reset (alias to /set 0)
   - [x] /update endpoint (updates the counter x)
 - [x] SSE Stream for the counters? Low priority.
-- [ ] Tests
+- [x] Tests
 - [x] Rate limiting (max 30 requests per 3 second per IP address)
 - [ ] Create [Python](https://github.com/BenJetson/py-countapi), [JS Wrappers](https://github.com/mlomb/countapi-js) & Go client libraries
 
