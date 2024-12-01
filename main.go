@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+
 	"github.com/anandvarma/namegen"
 
 	"github.com/redis/go-redis/v9"
@@ -40,9 +42,15 @@ var (
 )
 
 func init() {
-	// Connect to Redis
-	Shard = namegen.New().Get()
 	utils.LoadEnv()
+	// Use miniredis for testing
+	if strings.ToLower(os.Getenv("TESTING")) == "true" {
+		setupMockRedis()
+		return
+	}
+
+	// Production Redis setup
+	Shard = namegen.New().Get()
 
 	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
 		gin.SetMode(gin.DebugMode)
@@ -53,6 +61,7 @@ func init() {
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	log.Println("Listening to redis on: " + ADDR)
 	DbNum, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
+
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
 		Username: os.Getenv("REDIS_USERNAME"),
@@ -64,6 +73,24 @@ func init() {
 		Username: os.Getenv("REDIS_USERNAME"),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       DbNum + 1,
+	})
+}
+
+func setupMockRedis() {
+	// Used for testing, "miniredis" is a mock Redis server that runs in-memory for testing purposes only (no persistence)
+	mr, err := miniredis.Run()
+	if err != nil {
+		log.Fatalf("Failed to start miniredis: %v", err)
+	}
+
+	log.Println("Using miniredis for testing")
+
+	// Connect clients to miniredis
+	Client = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	RateLimitClient = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
 	})
 }
 
