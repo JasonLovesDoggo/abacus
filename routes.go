@@ -366,7 +366,7 @@ func StatsView(c *gin.Context) {
 
 	create, _ := strconv.Atoi(Client.Get(ctx, "stats:create").Val())
 
-	totalKeys := create + (hits / 10) // 10 hits per key (average taken from the first 1m requests) ~ Json
+	totalKeys := create + (hits / 60) // 60 hits per key (average taken from the first 6m requests) ~ Json
 
 	c.JSON(http.StatusOK, gin.H{
 		"version":                     Version,
