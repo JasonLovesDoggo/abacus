@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jasonlovesdoggo/abacus/utils"
 
@@ -23,10 +26,10 @@ func init() {
 	utils.LoadEnv()
 
 	if os.Getenv("TESTING") != "true" {
-		fmt.Println("Running tests in non-testing mode. Exiting...")
+		fmt.Println("Running tests in non-testing mode. Exiting... (hint: set TESTING=true in .env)")
 		os.Exit(0)
 	}
-	if Client.Get(context.Background(), "K:stats:Total") != nil {
+	if !errors.Is(Client.Get(context.Background(), "K:stats:Total").Err(), redis.Nil) {
 		fmt.Println("Running tests on a non-empty database. Exiting...")
 		os.Exit(0)
 	}
