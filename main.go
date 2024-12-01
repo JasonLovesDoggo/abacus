@@ -94,16 +94,8 @@ func setupMockRedis() {
 	})
 }
 
-func main() {
-	//gin.SetMode(gin.ReleaseMode)
-	// only run the following if .env is present
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	utils.LoadEnv()
-	StartTime = time.Now()
+func CreateRouter() *gin.Engine {
 	utils.InitializeStatsManager(Client)
-	// Initialize the Gin router
 	r := gin.Default()
 	// Cors
 	corsConfig := cors.Config{
@@ -168,8 +160,19 @@ func main() {
 		authorized.POST("/reset/:namespace/*key", ResetView)
 		authorized.POST("/update/:namespace/*key", UpdateByView)
 	}
-	// Run the server
+	return r
+}
 
+func main() {
+	//gin.SetMode(gin.ReleaseMode)
+	// only run the following if .env is present
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	utils.LoadEnv()
+	StartTime = time.Now()
+	// Initialize the Gin router
+	r := CreateRouter()
 	srv := &http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,

@@ -15,7 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// truncateString truncates the string to a maximum of 64 characters. If the string is less than 3 characters, it will be padded with dots.
+// truncateString truncates the string to a maximum of 64 characters. If the string is less than 3 characters,
+// it will be left padded with dots.
 func truncateString(s string) string {
 
 	strLen := len(s)
