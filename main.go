@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -177,6 +178,7 @@ func main() {
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,
 	}
+	fmt.Println("Listening on port " + os.Getenv("PORT"))
 
 	go func() {
 		// service connections

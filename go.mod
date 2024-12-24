@@ -1,24 +1,24 @@
 module github.com/jasonlovesdoggo/abacus
 
-go 1.22.0
+go 1.23.4
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.4
-	github.com/alicebob/miniredis/v2 v2.33.0
+	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/anandvarma/namegen v1.1.1
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
-	github.com/goccy/go-json v0.10.3
+	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.10.0
-	github.com/tom-draper/api-analytics/analytics/go/gin v0.0.0-20240311183400-e61603823215
+	github.com/tom-draper/api-analytics/analytics/go/gin v0.0.0-20241221143219-4500ca82466c
 )
 
 require (
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
-	github.com/bytedance/sonic v1.12.5 // indirect
+	github.com/bytedance/sonic v1.12.6 // indirect
 	github.com/bytedance/sonic/loader v0.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
@@ -40,15 +40,15 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/tom-draper/api-analytics/analytics/go/core v0.0.0-20240131194017-ce9a529d93ac // indirect
+	github.com/tom-draper/api-analytics/analytics/go/core v0.0.0-20241221143219-4500ca82466c // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	golang.org/x/arch v0.12.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
-	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
