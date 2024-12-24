@@ -16,8 +16,8 @@ import (
 const (
 	batchSize              uint16 = 150
 	maxPaths               uint64 = 120
-	bufferWarningThreshold uint16 = uint16(float32(batchSize) * 0.1)
-	// 10% of buffer capacity
+	bufferWarningThreshold uint16 = uint16(float32(batchSize) * 0.5)
+	// 50% of buffer capacity
 	totalWarningThreshold uint16 = uint16(0.8 * float32(maxPaths)) // 80% of max paths
 
 )
