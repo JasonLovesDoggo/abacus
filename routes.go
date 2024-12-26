@@ -21,7 +21,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var FIELD_KEYS = []string{"value", "admin_key"}
+
+func resetExpiration(dbKey string) {
+	Client.HExpire(context.Background(), dbKey, utils.BaseTTLPeriod, FIELD_KEYS...)
+}
+
 func StreamValueView(c *gin.Context) {
+	/*note: this route will not work on a sharded deployment as it stores notifications in a channel. If/When you wish to properly scale this you need to use the redis SUBSCRIBE command */
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -99,7 +106,7 @@ func HitView(c *gin.Context) {
 		return
 	}
 	// Get data from Redis
-	val, err := Client.Incr(context.Background(), dbKey).Result()
+	val, err := Client.HIncrBy(context.Background(), dbKey, "value", 1).Result()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
@@ -113,7 +120,7 @@ func HitView(c *gin.Context) {
 	go func() {
 		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
 		// see above) to ensure val is within the range of an int.
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		go resetExpiration(dbKey)
 	}()
 	if c.Query("callback") != "" {
 		c.JSONP(http.StatusOK, gin.H{"value": val})
@@ -134,7 +141,7 @@ func GetView(c *gin.Context) {
 		return
 	}
 	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
+	val, err := Client.HGet(context.Background(), dbKey, "value").Result()
 
 	if errors.Is(err, redis.Nil) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
@@ -144,9 +151,7 @@ func GetView(c *gin.Context) {
 		return
 	}
 
-	go func() {
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
-	}()
+	go resetExpiration(dbKey)
 	intval, _ := strconv.Atoi(val)
 	if c.Query("callback") != "" {
 		c.JSONP(http.StatusOK, gin.H{"value": intval})
@@ -183,7 +188,7 @@ func CreateView(c *gin.Context) {
 		return
 	}
 	// Get data from Redis
-	created := Client.SetNX(context.Background(), dbKey, initialValue, utils.BaseTTLPeriod)
+	created := Client.HSetNX(context.Background(), dbKey, "value", initialValue)
 	if created.Val() == false {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key already exists, please use a different key."})
 		return
@@ -315,14 +320,14 @@ func UpdateByView(c *gin.Context) {
 		return
 	}
 
-	exists := Client.Exists(context.Background(), dbKey).Val() == 0
-	if exists {
+	exists := Client.HExists(context.Background(), dbKey, "value").Val()
+	if !exists {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please first create it using /create."})
 		return
 	}
 
 	// Get data from Redis
-	val, err := Client.IncrByFloat(context.Background(), dbKey, float64(incrByValue)).Result()
+	val, err := Client.HIncrByFloat(context.Background(), dbKey, "value", float64(incrByValue)).Result()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
 		return
@@ -359,12 +364,12 @@ func StatsView(c *gin.Context) {
 		}
 	}
 
-	total, _ := strconv.Atoi(Client.Get(ctx, "stats:Total").Val())
+	total, _ := strconv.Atoi(Client.HGet(ctx, "stats", "total").Val())
 
-	hits, _ := strconv.Atoi(Client.Get(ctx, "stats:hit").Val())
-	gets, _ := strconv.Atoi(Client.Get(ctx, "stats:get").Val())
+	hits, _ := strconv.Atoi(Client.HGet(ctx, "stats", "hit").Val())
+	gets, _ := strconv.Atoi(Client.HGet(ctx, "stats", "get").Val())
 
-	create, _ := strconv.Atoi(Client.Get(ctx, "stats:create").Val())
+	create, _ := strconv.Atoi(Client.HGet(ctx, "stats", "create").Val())
 
 	totalKeys := create + (hits / 60) // 60 hits per key (average taken from the first 6m requests) ~ Json
 
