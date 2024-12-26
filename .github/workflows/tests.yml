@@ -6,11 +6,10 @@ on:
 
 jobs:
   # Label of the container job
-  container-job:
+  test:
     # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
     # Docker Hub image that `container-job` executes in
-    container: golang:latest
 
     # Service containers to run with `container-job`
     services:
@@ -29,17 +28,14 @@ jobs:
       # Downloads a copy of the code in your repository before running CI tests
       - name: Checkout
         uses: actions/checkout@v4
-
+      - uses: actions/setup-go@v5
+        with:
+            go-version: '^1.23.4'
       - name: Install dependencies
         run: go install -buildvcs=false
 
-      - name: Install k6
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
 
       - name: Set redis env vars
         run: |
@@ -53,8 +49,11 @@ jobs:
       - name: Run Unit tests
         run: go test ./...
 
+      - name: Start abacus
+        run: go run . && sleep 5
+
       - name: Run k6 tests
-        run: k6 run --vus 10 --duration 30s ./tests/
+        run: k6 run --vus 10 --duration 30s ./tests/performance.js
 
 
 
