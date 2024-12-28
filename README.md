@@ -23,7 +23,7 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
                                                    
 3. Add a `.env` file to the root of the project (or set the environment variables manually) following the format specified in .env.example
 
-4. Run `air` (if installed) or `go build` to build and run the API locally.
+4. Run `air` (if installed) or `go run .` to build and run the API locally.
 
 5. The API will be running on `http://0.0.0.0:8080` by default.
  
