@@ -10,7 +10,7 @@ type ValueEvent struct {
 	NewClients    chan KeyClientPair
 	ClosedClients chan KeyClientPair
 	TotalClients  map[string]map[chan int]bool
-	mu            sync.RWMutex
+	Mu            sync.RWMutex
 }
 
 type KeyValue struct {
@@ -38,16 +38,16 @@ func (v *ValueEvent) listen() {
 	for {
 		select {
 		case newClient := <-v.NewClients:
-			v.mu.Lock()
+			v.Mu.Lock()
 			if _, exists := v.TotalClients[newClient.Key]; !exists {
 				v.TotalClients[newClient.Key] = make(map[chan int]bool)
 			}
 			v.TotalClients[newClient.Key][newClient.Client] = true
-			v.mu.Unlock()
+			v.Mu.Unlock()
 			log.Printf("Client added for key %s. Total clients: %d", newClient.Key, len(v.TotalClients[newClient.Key]))
 
 		case closedClient := <-v.ClosedClients:
-			v.mu.Lock()
+			v.Mu.Lock()
 			delete(v.TotalClients[closedClient.Key], closedClient.Client)
 			close(closedClient.Client)
 
@@ -55,15 +55,15 @@ func (v *ValueEvent) listen() {
 			if len(v.TotalClients[closedClient.Key]) == 0 {
 				delete(v.TotalClients, closedClient.Key)
 			}
-			v.mu.Unlock()
+			v.Mu.Unlock()
 			log.Printf("Removed client for key %s", closedClient.Key)
 
 		case keyValue := <-v.Message:
-			v.mu.RLock()
+			v.Mu.RLock()
 			for clientChan := range v.TotalClients[keyValue.Key] {
 				clientChan <- keyValue.Value
 			}
-			v.mu.RUnlock()
+			v.Mu.RUnlock()
 		}
 	}
 }
@@ -86,12 +86,12 @@ func SetStream(dbKey string, newValue int) {
 
 func CloseStream(dbKey string) {
 	// Close all client channels for this specific key
-	ValueEventServer.mu.Lock()
+	ValueEventServer.Mu.Lock()
 	if clients, exists := ValueEventServer.TotalClients[dbKey]; exists {
 		for clientChan := range clients {
 			close(clientChan)
 		}
 		delete(ValueEventServer.TotalClients, dbKey)
 	}
-	ValueEventServer.mu.Unlock()
+	ValueEventServer.Mu.Unlock()
 }
