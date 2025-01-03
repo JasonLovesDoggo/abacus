@@ -50,7 +50,7 @@ jobs:
         run: go test ./...
 
       - name: Start abacus
-        run: go run . && sleep 5
+        run: nohup go run . &
 
       - name: Run k6 tests
         run: k6 run --vus 10 --duration 30s ./tests/performance.js
