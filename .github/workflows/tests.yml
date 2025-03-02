@@ -42,6 +42,11 @@ jobs:
 
       - name: Start Abacus server
         run: |
+          # Set required environment variables
+          export PORT=8080
+          export REDIS_HOST=localhost
+          export REDIS_PORT=6379
+          
           # Start server in background
           nohup go run . > server.log 2>&1 &
           echo $! > server.pid
