@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	// How many paths to track before using overflow
-	maxPaths = 120
+	// How many paths to track before panicking
+	maxPaths = 45
 	// Threshold for total count to trigger save
 	saveThreshold = 100
 )
@@ -57,14 +58,16 @@ func (sm *StatManager) RecordStat(path string, count int64) {
 	if !loaded {
 		// Check if we've hit the path limit
 		if sm.pathCount.Load() >= maxPaths {
-			// Use overflow bucket
-			val, _ = sm.stats.LoadOrStore("overflow", new(int64))
-		} else {
-			// Create new counter
-			val = new(int64)
-			sm.stats.Store(path, val)
-			sm.pathCount.Add(1)
+			// Panic instead of using overflow bucket
+			panic(fmt.Sprintf("Stats path limit exceeded: %d paths is the maximum allowed... if you see this, "+
+				"please make a issue @ https://github.com/JasonLovesDoggo/abacus or raise stats.maxPaths",
+				maxPaths))
 		}
+
+		// Create new counter
+		val = new(int64)
+		sm.stats.Store(path, val)
+		sm.pathCount.Add(1)
 	}
 
 	// Update path counter atomically
