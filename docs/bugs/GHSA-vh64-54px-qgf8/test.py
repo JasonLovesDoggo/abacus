@@ -10,7 +10,7 @@ This script creates three types of connections:
 This mixed approach better simulates real-world client behavior and tests
 the server's ability to clean up all types of disconnected clients.
 
-Author: JasonLovesDoggo (2025-03-02)
+Author: JasonLovesDoggo (2025-03-01)
 """
 
 import argparse
