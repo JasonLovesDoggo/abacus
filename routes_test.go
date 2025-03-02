@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -482,6 +483,10 @@ func TestStreamValueView(t *testing.T) {
 		w := newMockResponseWriter()
 		req, _ := http.NewRequest("GET", "/stream/test/stream_key", nil)
 
+		// Create a new context with cancellation
+		requestCtx, cancelFunc := context.WithCancel(req.Context())
+		req = req.WithContext(requestCtx)
+
 		// Channel to signal test completion
 		done := make(chan struct{})
 		go func() {
@@ -489,10 +494,21 @@ func TestStreamValueView(t *testing.T) {
 			r.ServeHTTP(w, req)
 		}()
 
-		// Give the stream some time to start
-		time.Sleep(100 * time.Millisecond)
+		// Wait for initial response
+		waitForContains := func(w *mockResponseWriter, expected string, timeout time.Duration) bool {
+			deadline := time.Now().Add(timeout)
+			for time.Now().Before(deadline) {
+				if strings.Contains(w.Body.String(), expected) {
+					return true
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			return false
+		}
 
-		assert.Contains(t, w.Header().Get("Content-Type"), "text/event-stream")
+		if !waitForContains(w, "data:", 500*time.Millisecond) {
+			t.Fatal("Initial SSE connection not established in time")
+		}
 
 		// Hit the key to generate updates
 		hitReq, _ := http.NewRequest("GET", "/hit/test/stream_key", nil)
@@ -500,17 +516,28 @@ func TestStreamValueView(t *testing.T) {
 		// Trigger updates
 		hitW := httptest.NewRecorder()
 		r.ServeHTTP(hitW, hitReq)
-		time.Sleep(50 * time.Millisecond) // Allow the stream to process
-		assert.Contains(t, w.Body.String(), "data: {\"value\":1}\n\n")
 
-		r.ServeHTTP(hitW, hitReq)         // Hit it again
-		time.Sleep(50 * time.Millisecond) // Allow the stream to process
-		assert.Contains(t, w.Body.String(), "data: {\"value\":2}\n\n")
+		// Check for value 1 with timeout
+		if !waitForContains(w, "data: {\"value\":1}\n\n", 500*time.Millisecond) {
+			t.Fatal("Did not receive first update in time")
+		}
+
+		r.ServeHTTP(hitW, hitReq) // Hit it again
+
+		// Check for value 2 with timeout
+		if !waitForContains(w, "data: {\"value\":2}\n\n", 500*time.Millisecond) {
+			t.Fatal("Did not receive second update in time")
+		}
 
 		// Signal the stream to stop
+		cancelFunc()
+
+		// Wait for goroutine to finish with timeout
 		select {
 		case <-done:
-		case <-time.After(1 * time.Second): // Ensure test doesn't hang forever
+			// Test completed successfully
+		case <-time.After(1 * time.Second):
+			t.Fatal("Test timed out waiting for stream to close")
 		}
 	})
 }

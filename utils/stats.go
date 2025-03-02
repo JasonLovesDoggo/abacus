@@ -150,6 +150,9 @@ func (sm *StatManager) monitorHealth() {
 			// Log that we're skipping save despite high total because buffer is empty
 			log.Printf("Total count high (%d/%d) but buffer is empty. Skipping unnecessary save operation.",
 				snapshot.Total, totalWarningThreshold)
+		} else {
+			log.Printf("Buffer (%d/%d) and total count (%d/%d) are within acceptable limits. Skipping save operation.",
+				len(sm.buffer), batchSize, snapshot.Total, totalWarningThreshold)
 		}
 	}
 }

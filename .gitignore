@@ -2,3 +2,7 @@
 tmp
 .env
 !.idea/httpRequests
+.venv
+abacus.exe
+*.bru
+bruno.json

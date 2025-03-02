@@ -18,5 +18,5 @@ CMD ["/abacus"]
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 CMD wget -S -O - http://0.0.0.0:8080/healthcheck || exit 1
 
 LABEL maintainer="Jason Cameron abacus@jasoncameron.dev"
-LABEL version="1.3.3"
+LABEL version="1.4.0"
 LABEL description="This is a simple countAPI service written in Go."

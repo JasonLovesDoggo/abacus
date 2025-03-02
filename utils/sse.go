@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"sync"
+	"time"
 )
 
 type ValueEvent struct {
@@ -25,9 +26,10 @@ type KeyClientPair struct {
 
 func NewValueEventServer() *ValueEvent {
 	event := &ValueEvent{
-		Message:       make(chan KeyValue),
-		NewClients:    make(chan KeyClientPair),
-		ClosedClients: make(chan KeyClientPair),
+		// Use buffered channels to prevent blocking
+		Message:       make(chan KeyValue, 100),
+		NewClients:    make(chan KeyClientPair, 100),
+		ClosedClients: make(chan KeyClientPair, 100),
 		TotalClients:  make(map[string]map[chan int]bool),
 	}
 	go event.listen()
@@ -48,24 +50,83 @@ func (v *ValueEvent) listen() {
 
 		case closedClient := <-v.ClosedClients:
 			v.Mu.Lock()
-			delete(v.TotalClients[closedClient.Key], closedClient.Client)
-			close(closedClient.Client)
+			if clients, exists := v.TotalClients[closedClient.Key]; exists {
+				if _, ok := clients[closedClient.Client]; ok {
+					delete(clients, closedClient.Client)
 
-			// Clean up key map if no more clients
-			if len(v.TotalClients[closedClient.Key]) == 0 {
-				delete(v.TotalClients, closedClient.Key)
+					// Close channel safely
+					close(closedClient.Client)
+
+					log.Printf("Removed client for key %s", closedClient.Key)
+
+					// Clean up key map if no more clients
+					if len(clients) == 0 {
+						delete(v.TotalClients, closedClient.Key)
+						log.Printf("No more clients for key %s, removed key entry", closedClient.Key)
+					}
+				}
 			}
 			v.Mu.Unlock()
-			log.Printf("Removed client for key %s", closedClient.Key)
 
 		case keyValue := <-v.Message:
+			// First, get a snapshot of clients under read lock
 			v.Mu.RLock()
-			for clientChan := range v.TotalClients[keyValue.Key] {
-				clientChan <- keyValue.Value
+			clients, exists := v.TotalClients[keyValue.Key]
+			if !exists || len(clients) == 0 {
+				v.Mu.RUnlock()
+				continue
+			}
+
+			// Create a safe copy of client channels
+			clientChannels := make([]chan int, 0, len(clients))
+			for clientChan := range clients {
+				clientChannels = append(clientChannels, clientChan)
 			}
 			v.Mu.RUnlock()
+
+			// Send messages without holding the lock
+			// Track which clients failed to receive
+			var failedClients []chan int
+			for _, clientChan := range clientChannels {
+				select {
+				case clientChan <- keyValue.Value:
+					// Message sent successfully
+				case <-time.After(100 * time.Millisecond):
+					// Client not responding, mark for removal
+					failedClients = append(failedClients, clientChan)
+				}
+			}
+
+			// Schedule removal of failed clients
+			for _, failedClient := range failedClients {
+				select {
+				case v.ClosedClients <- KeyClientPair{Key: keyValue.Key, Client: failedClient}:
+					// Client scheduled for removal
+				default:
+					// If ClosedClients channel is full, try again later
+					go func(key string, client chan int) {
+						time.Sleep(200 * time.Millisecond)
+						select {
+						case v.ClosedClients <- KeyClientPair{Key: key, Client: client}:
+							// Success on retry
+						default:
+							log.Printf("Failed to remove client for key %s even after retry", key)
+						}
+					}(keyValue.Key, failedClient)
+				}
+			}
 		}
 	}
+}
+
+func (v *ValueEvent) CountClientsForKey(key string) int {
+	v.Mu.RLock()
+	defer v.Mu.RUnlock()
+
+	if clients, exists := v.TotalClients[key]; exists {
+		return len(clients)
+	}
+	return 0
 }
 
 // Global event server
@@ -77,10 +138,12 @@ func init() {
 
 // When you want to update a value and notify clients for a specific key
 func SetStream(dbKey string, newValue int) {
-	// Broadcast the new value only to clients listening to this specific key
-	ValueEventServer.Message <- KeyValue{
-		Key:   dbKey,
-		Value: newValue,
+	// Use a non-blocking send with default case to prevent blocking
+	select {
+	case ValueEventServer.Message <- KeyValue{Key: dbKey, Value: newValue}:
+		// Message sent successfully
+	default:
+		log.Printf("Warning: Message channel full, update for key %s dropped", dbKey)
 	}
 }
 
@@ -100,8 +163,11 @@ func CloseStream(dbKey string) {
 	ValueEventServer.Mu.Unlock()
 
 	// Now close the channels after releasing the lock
-	// This ensures we're not holding the lock while performing potentially blocking operations
 	for _, ch := range channelsToClose {
 		close(ch)
+	}
+
+	if len(channelsToClose) > 0 {
+		log.Printf("Closed all streams for key %s (%d clients)", dbKey, len(channelsToClose))
 	}
 }
