@@ -42,6 +42,8 @@ var (
 	Shard           string
 )
 
+const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
+
 func init() {
 	utils.LoadEnv()
 	// Use miniredis for testing
@@ -171,6 +173,12 @@ func CreateRouter() *gin.Engine {
 }
 
 func main() {
+	if is32Bit {
+		log.Fatal("This program is not supported on 32-bit systems, " +
+			"please run on a 64-bit system. If you wish for 32-bit support, " +
+			"please open an issue on the GitHub repository.\nexiting...")
+	}
+
 	utils.LoadEnv()
 	StartTime = time.Now()
 
