@@ -15,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var validationRegex = regexp.MustCompile(`^[A-Za-z0-9_\-.]{3,64}$`)
+
 // truncateString truncates the string to a maximum of 64 characters. If the string is less than 3 characters,
 // it will be left padded with dots.
 func truncateString(s string) string {
@@ -99,10 +101,7 @@ func validate(input string) error {
 	if len(input) < 3 || len(input) > 64 {
 		return fmt.Errorf("length must be between 3 and 64 characters inclusive")
 	}
-	match, err := regexp.MatchString(`^[A-Za-z0-9_\-.]{3,64}$`, input)
-	if err != nil {
-		return err
-	}
+	match := validationRegex.MatchString(input)
 	if !match {
 		return fmt.Errorf("must match the pattern ^[A-Za-z0-9_\\-.]{3,64}$")
 	}
