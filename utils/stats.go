@@ -137,14 +137,22 @@ func (sm *StatManager) monitorHealth() {
 		stats, _ := json.MarshalIndent(snapshot, "", "  ")
 		log.Printf("Stats Health Check:\n%s", string(stats))
 
-		if len(sm.buffer) > int(bufferWarningThreshold) || Total >= int64(totalWarningThreshold) {
-			log.Printf("(Buffer || Total count) reaching capacity (%d/%d). Triggering save operation.",
-				len(sm.buffer), batchSize)
+		// Only trigger save if there's actually something in the buffer
+		// or if the total is high enough to warrant a save
+		bufferNearCapacity := len(sm.buffer) > int(bufferWarningThreshold)
+		totalHighButBufferNotEmpty := snapshot.Total >= int64(totalWarningThreshold) && len(sm.buffer) > 0
+
+		if bufferNearCapacity || totalHighButBufferNotEmpty {
+			log.Printf("Buffer (%d/%d) or total count (%d/%d) reaching capacity with data to save. Triggering save operation.",
+				len(sm.buffer), batchSize, snapshot.Total, totalWarningThreshold)
 			sm.saveStatsToRedis(true)
+		} else if snapshot.Total >= int64(totalWarningThreshold) {
+			// Log that we're skipping save despite high total because buffer is empty
+			log.Printf("Total count high (%d/%d) but buffer is empty. Skipping unnecessary save operation.",
+				snapshot.Total, totalWarningThreshold)
 		}
 	}
 }
-
 func (sm *StatManager) processBuffer() {
 	for entry := range sm.buffer {
 		if len(sm.buffer) > int(bufferWarningThreshold) {
