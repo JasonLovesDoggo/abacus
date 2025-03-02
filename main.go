@@ -174,7 +174,6 @@ func main() {
 	utils.LoadEnv()
 	StartTime = time.Now()
 
-	// Single signal handling approach
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -195,22 +194,16 @@ func main() {
 	<-ctx.Done()
 	log.Println("Shutdown signal received")
 
-	// First, notify all components to prepare for shutdown
-	close(utils.ServerClose)
+	// Signal StatsManager to save and wait for completion
+	log.Println("Signaling stats manager to save data...")
+	utils.ServerClose <- true
 
-	// Wait a moment to allow stats to be saved
-	// The ServerClose channel signals StatsManager to perform final save
-	log.Println("Waiting for final stats to be saved...")
-	time.Sleep(500 * time.Millisecond)
+	// Wait for the response on the same channel
+	log.Println("Waiting for stats manager to complete...")
+	<-utils.ServerClose
+	log.Println("Stats saving confirmed complete")
 
-	// Manually trigger a final stats save to ensure everything is written
-	if utils.StatsManager != nil {
-		log.Println("Saving final stats...")
-		utils.StatsManager.SaveStatsToRedis(true)
-		log.Println("Final stats saved")
-	}
-
-	// Now it's safe to close the Redis connections
+	// Now close Redis connections
 	log.Println("Closing Redis connections...")
 	if Client != nil {
 		if err := Client.Close(); err != nil {
@@ -223,7 +216,7 @@ func main() {
 		}
 	}
 
-	// Finally, shut down the HTTP server
+	// Shut down the HTTP server
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -231,7 +224,6 @@ func main() {
 		log.Fatal("Server Shutdown:", err)
 	}
 
-	// Wait for the context to finish or timeout
 	<-shutdownCtx.Done()
 	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
 		log.Println("Shutdown timeout of 5 seconds exceeded")

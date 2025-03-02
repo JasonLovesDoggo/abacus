@@ -24,7 +24,7 @@ const (
 
 var (
 	Total        int64 = 0
-	ServerClose        = make(chan struct{})
+	ServerClose        = make(chan bool, 1)
 	StatsManager *StatManager
 )
 
@@ -195,11 +195,23 @@ func InitializeStatsManager(client *redis.Client) *StatManager {
 			select {
 			case <-ticker.C:
 				sm.saveStatsToRedis(false)
-			case <-ServerClose:
+			case _, ok := <-ServerClose:
 				ticker.Stop()
-				log.Println("Saving final stats... Closing stats goroutine. Goodbye!")
+				if !ok {
+					// Channel was closed, use old behavior
+					log.Println("Saving final stats... Channel was closed.")
+					sm.saveStatsToRedis(true)
+					return
+				}
+
+				// New behavior - received sync signal
+				log.Println("Saving final stats before shutdown...")
 				sm.saveStatsToRedis(true)
 				close(sm.buffer)
+
+				// Signal back on the same channel that we're done
+				log.Println("Stats saving completed, sending completion signal")
+				ServerClose <- true
 				return
 			}
 		}
