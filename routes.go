@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -34,56 +34,99 @@ func StreamValueView(c *gin.Context) {
 		return
 	}
 
-	// Initialize client channel
-	clientChan := make(chan int)
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
 
-	// Add this client to the event server for this specific key
+	// Initialize client channel with buffer to prevent deadlock
+	clientChan := make(chan int, 5) // Buffer a few values to prevent blocking
+
+	// Create a cancellable context for this client
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel() // Ensure context is always canceled
+
+	// Client registration
 	utils.ValueEventServer.NewClients <- utils.KeyClientPair{
 		Key:    dbKey,
 		Client: clientChan,
 	}
 
-	defer func() {
-		// Drain client channel to prevent blocking
-		go func() {
-			for range clientChan {
-				// Drain client channel to prevent blocking
-			}
-		}()
+	// Use a proper mutex-protected flag to track cleanup state
+	var cleanupOnce sync.Once
+	cleanup := func() {
+		cleanupOnce.Do(func() {
+			log.Printf("Cleaning up client for key %s", dbKey)
 
-		// Remove this client from the event server
-		utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{
-			Key:    dbKey,
-			Client: clientChan,
+			// Signal that this client is closed
+			select {
+			case utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{
+				Key:    dbKey,
+				Client: clientChan,
+			}:
+				// Successfully sent close signal
+			case <-time.After(500 * time.Millisecond):
+				log.Printf("Warning: Timed out sending client closure signal for %s", dbKey)
+			}
+
+			// Use a separate goroutine to drain any remaining messages
+			// This prevents blocking the cleanup function
+			go func() {
+				timeout := time.NewTimer(1 * time.Second)
+				defer timeout.Stop()
+
+				// Drain any pending messages
+				for {
+					select {
+					case _, ok := <-clientChan:
+						if !ok {
+							return // Channel already closed
+						}
+						// Discard message
+					case <-timeout.C:
+						// Safety timeout
+						return
+					}
+				}
+			}()
+		})
+	}
+
+	// Ensure cleanup runs when handler exits
+	defer cleanup()
+
+	// Monitor for client disconnection
+	go func() {
+		select {
+		case <-ctx.Done(): // Context done = client disconnected or request canceled
+			cleanup()
 		}
 	}()
 
 	// Send initial value
 	initialVal := Client.Get(context.Background(), dbKey).Val()
 	if count, err := strconv.Atoi(initialVal); err == nil {
-		_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
-		if err != nil {
-			log.Printf("Error writing to client: %v", err)
-			return
-		}
+		c.SSEvent("message", map[string]int{"value": count})
 		c.Writer.Flush()
 	}
 
-	// Stream updates
+	// Stream updates with clear error handling
 	c.Stream(func(w io.Writer) bool {
 		select {
-		case <-c.Request.Context().Done():
+		case <-ctx.Done():
+			log.Printf("Client context done for key %s", dbKey)
 			return false
+
 		case count, ok := <-clientChan:
 			if !ok {
+				log.Printf("Client channel closed for key %s", dbKey)
 				return false
 			}
-			_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
-			if err != nil {
-				log.Printf("Error writing to client: %v", err)
-				return false // Stream closed by client or server error
-			}
-			c.Writer.Flush()
+
+			// Use SSEvent for consistent formatting
+			c.SSEvent("message", map[string]int{"value": count})
+
 			return true
 		}
 	})
