@@ -61,7 +61,13 @@ func init() {
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	log.Println("Listening to redis on: " + ADDR)
-	DbNum, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
+	var err error
+	DbNum, err = strconv.Atoi(os.Getenv("REDIS_DB"))
+	if err != nil {
+		log.Fatalf("Invalid Redis DB number: %v", err)
+	} else if DbNum < 0 || DbNum > 16 {
+		log.Fatalf("Redis DB must be between 0-16: %v", DbNum)
+	}
 
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
