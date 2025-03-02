@@ -85,13 +85,23 @@ func SetStream(dbKey string, newValue int) {
 }
 
 func CloseStream(dbKey string) {
-	// Close all client channels for this specific key
+	// First collect all channels to be closed while holding the lock
+	var channelsToClose []chan int
+
 	ValueEventServer.Mu.Lock()
 	if clients, exists := ValueEventServer.TotalClients[dbKey]; exists {
+		// Create a copy of all channels we need to close
 		for clientChan := range clients {
-			close(clientChan)
+			channelsToClose = append(channelsToClose, clientChan)
 		}
+		// Remove the entry from the map
 		delete(ValueEventServer.TotalClients, dbKey)
 	}
 	ValueEventServer.Mu.Unlock()
+
+	// Now close the channels after releasing the lock
+	// This ensures we're not holding the lock while performing potentially blocking operations
+	for _, ch := range channelsToClose {
+		close(ch)
+	}
 }

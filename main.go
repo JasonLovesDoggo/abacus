@@ -171,46 +171,70 @@ func CreateRouter() *gin.Engine {
 }
 
 func main() {
-	//gin.SetMode(gin.ReleaseMode)
-	// only run the following if .env is present
+	utils.LoadEnv()
+	StartTime = time.Now()
+
+	// Single signal handling approach
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	utils.LoadEnv()
-	StartTime = time.Now()
-	// Initialize the Gin router
 	r := CreateRouter()
-	srv := &http.Server{ // #nosec G112 -- Due to the use of SSE endpoints, we cannot close the server early
+	srv := &http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,
 	}
 	fmt.Println("Listening on port " + os.Getenv("PORT"))
 
 	go func() {
-		// service connections
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
-	quit := make(chan os.Signal, 1)
-	// kill (no param) default send syscall.SIGTERM
-	// kill -2 is syscall.SIGINT
-	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	// Wait for interrupt signal
+	<-ctx.Done()
+	log.Println("Shutdown signal received")
+
+	// First, notify all components to prepare for shutdown
 	close(utils.ServerClose)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Wait a moment to allow stats to be saved
+	// The ServerClose channel signals StatsManager to perform final save
+	log.Println("Waiting for final stats to be saved...")
+	time.Sleep(500 * time.Millisecond)
+
+	// Manually trigger a final stats save to ensure everything is written
+	if utils.StatsManager != nil {
+		log.Println("Saving final stats...")
+		utils.StatsManager.SaveStatsToRedis(true)
+		log.Println("Final stats saved")
+	}
+
+	// Now it's safe to close the Redis connections
+	log.Println("Closing Redis connections...")
+	if Client != nil {
+		if err := Client.Close(); err != nil {
+			log.Printf("Error closing Redis client: %v", err)
+		}
+	}
+	if RateLimitClient != nil {
+		if err := RateLimitClient.Close(); err != nil {
+			log.Printf("Error closing Redis rate limit client: %v", err)
+		}
+	}
+
+	// Finally, shut down the HTTP server
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatal("Server Shutdown:", err)
 	}
-	select {
-	case <-ctx.Done():
-		log.Println("timeout of 5 seconds.")
+
+	// Wait for the context to finish or timeout
+	<-shutdownCtx.Done()
+	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
+		log.Println("Shutdown timeout of 5 seconds exceeded")
 	}
 	log.Println("Server exiting")
 }
