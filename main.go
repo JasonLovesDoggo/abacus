@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
@@ -46,6 +47,13 @@ const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
 
 func init() {
 	utils.LoadEnv()
+
+	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Use miniredis for testing
 	if strings.ToLower(os.Getenv("TESTING")) == "true" {
 		setupMockRedis()
@@ -54,12 +62,6 @@ func init() {
 
 	// Production Redis setup
 	Shard = namegen.New().Get()
-
-	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	log.Println("Listening to redis on: " + ADDR)
@@ -106,6 +108,25 @@ func setupMockRedis() {
 func CreateRouter() *gin.Engine {
 	utils.InitializeStatsManager(Client)
 	r := gin.Default()
+
+	if gin.Mode() == gin.DebugMode {
+		// Register pprof handlers
+		pproRouter := r.Group("/debug/pprof")
+		{
+			pproRouter.GET("/", gin.WrapF(pprof.Index))
+			pproRouter.GET("/cmdline", gin.WrapF(pprof.Cmdline))
+			pproRouter.GET("/profile", gin.WrapF(pprof.Profile))
+			pproRouter.GET("/symbol", gin.WrapF(pprof.Symbol))
+			pproRouter.GET("/trace", gin.WrapF(pprof.Trace))
+			pproRouter.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+			pproRouter.GET("/block", gin.WrapH(pprof.Handler("block")))
+			pproRouter.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+			pproRouter.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+			pproRouter.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+			pproRouter.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+		}
+	}
+
 	// Cors
 	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
@@ -114,6 +135,7 @@ func CreateRouter() *gin.Engine {
 		AllowAllOrigins:  true,
 		MaxAge:           12 * time.Hour,
 	}
+
 	r.Use(cors.New(corsConfig))
 	r.Use(gin.Recovery()) // recover from panics and returns a 500 error
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
