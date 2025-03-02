@@ -3,57 +3,84 @@ on:
   push:
     paths:
       - '**.go'
+  pull_request:
+    paths:
+      - '**.go'
 
 jobs:
-  # Label of the container job
   test:
-    # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
-    # Docker Hub image that `container-job` executes in
 
-    # Service containers to run with `container-job`
     services:
-      # Label used to access the service container
       redis:
-        # Docker Hub image
         image: redis
-        # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
-      # Downloads a copy of the code in your repository before running CI tests
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
             go-version: '^1.23.4'
+
       - name: Install dependencies
-        run: go install -buildvcs=false
+        run: go mod download
 
       - name: Setup K6
         uses: grafana/setup-k6-action@v1
 
-      - name: Set redis env vars
-        run: |
-            export REDIS_HOST=redis
-            export REDIS_PORT=6379
-            export REDIS_USERNAME=
-            export REDIS_PASSWORD=
-            export REDIS_DB=0
-
-
       - name: Run Unit tests
         run: go test ./...
 
-      - name: Start abacus
-        run: nohup go run . &
+      - name: Start Abacus server
+        run: |
+          # Set required environment variables
+          export PORT=8080
+          export REDIS_HOST=localhost
+          export REDIS_PORT=6379
+          
+          # Start server in background
+          nohup go run . > server.log 2>&1 &
+          echo $! > server.pid
+          
+          # Wait for the server to be ready (max 30 seconds)
+          echo "Waiting for Abacus server to start..."
+          timeout=30
+          while ! curl -s http://localhost:8080/healthcheck > /dev/null; do
+            if [[ $timeout -eq 0 ]]; then
+              echo "Timed out waiting for server to start"
+              cat server.log
+              exit 1
+            fi
+            echo "Server not ready yet, waiting..."
+            sleep 1
+            ((timeout--))
+          done
+          echo "Server is running!"
 
       - name: Run k6 tests
-        run: k6 run --vus 10 --duration 30s ./tests/performance.js
+        run: |
+          # Run the performance tests
+          k6 run --vus 10 --duration 30s ./tests/performance.js
 
+      - name: Check server logs
+        if: always()
+        run: |
+          echo "Server logs:"
+          cat server.log
 
-
+      - name: Stop Abacus server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            echo "Server stopped"
+          fi

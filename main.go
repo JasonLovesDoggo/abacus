@@ -31,7 +31,7 @@ import (
 
 const (
 	DocsUrl string = "https://jasoncameron.dev/abacus/"
-	Version string = "1.3.3"
+	Version string = "1.4.0"
 )
 
 var (
@@ -41,6 +41,8 @@ var (
 	StartTime       time.Time
 	Shard           string
 )
+
+const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
 
 func init() {
 	utils.LoadEnv()
@@ -61,7 +63,13 @@ func init() {
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	log.Println("Listening to redis on: " + ADDR)
-	DbNum, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
+	var err error
+	DbNum, err = strconv.Atoi(os.Getenv("REDIS_DB"))
+	if err != nil {
+		DbNum = 0 // Default to 0 if not set
+	} else if DbNum < 0 || DbNum > 16 {
+		log.Fatalf("Redis DB must be between 0-16: %v", DbNum)
+	}
 
 	Client = redis.NewClient(&redis.Options{
 		Addr:     ADDR, // Redis server address
@@ -165,46 +173,68 @@ func CreateRouter() *gin.Engine {
 }
 
 func main() {
-	//gin.SetMode(gin.ReleaseMode)
-	// only run the following if .env is present
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	if is32Bit {
+		log.Fatal("This program is not supported on 32-bit systems, " +
+			"please run on a 64-bit system. If you wish for 32-bit support, " +
+			"please open an issue on the GitHub repository.\nexiting...")
+	}
 
 	utils.LoadEnv()
 	StartTime = time.Now()
-	// Initialize the Gin router
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	r := CreateRouter()
-	srv := &http.Server{ // #nosec G112 -- Due to the use of SSE endpoints, we cannot close the server early
+	srv := &http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,
 	}
 	fmt.Println("Listening on port " + os.Getenv("PORT"))
 
 	go func() {
-		// service connections
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
-	quit := make(chan os.Signal, 1)
-	// kill (no param) default send syscall.SIGTERM
-	// kill -2 is syscall.SIGINT
-	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	close(utils.ServerClose)
+	// Wait for interrupt signal
+	<-ctx.Done()
+	log.Println("Shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Signal StatsManager to save and wait for completion
+	log.Println("Signaling stats manager to save data...")
+	utils.ServerClose <- true
+
+	// Wait for the response on the same channel
+	log.Println("Waiting for stats manager to complete...")
+	<-utils.ServerClose
+	log.Println("Stats saving confirmed complete")
+
+	// Now close Redis connections
+	log.Println("Closing Redis connections...")
+	if Client != nil {
+		if err := Client.Close(); err != nil {
+			log.Printf("Error closing Redis client: %v", err)
+		}
+	}
+	if RateLimitClient != nil {
+		if err := RateLimitClient.Close(); err != nil {
+			log.Printf("Error closing Redis rate limit client: %v", err)
+		}
+	}
+
+	// Shut down the HTTP server
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatal("Server Shutdown:", err)
 	}
-	select {
-	case <-ctx.Done():
-		log.Println("timeout of 5 seconds.")
+
+	<-shutdownCtx.Done()
+	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
+		log.Println("Shutdown timeout of 5 seconds exceeded")
 	}
 	log.Println("Server exiting")
 }

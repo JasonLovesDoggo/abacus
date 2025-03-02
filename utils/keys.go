@@ -38,6 +38,11 @@ func convertReserved(c *gin.Context, input string) string {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Origin header is required if :HOST: is used"})
 			return ""
 		}
+		// Added validation for Origin header
+		if !validateURL(origin) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Origin header format"})
+			return ""
+		}
 		return truncateString(origin)
 	} else if input == ":PATH:" {
 		path := c.Request.Header.Get("Referer")
@@ -45,9 +50,13 @@ func convertReserved(c *gin.Context, input string) string {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Referer header is required if :PATH: is used"})
 			return ""
 		}
-
+		// Added validation for Referer header
+		if !validateURL(path) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Referer header format"})
+			return ""
+		}
+		// todo: should we split and only store the actual PATH part? Changing this may break existing clients.
 		return truncateString(path)
-
 	}
 
 	return input
@@ -151,4 +160,27 @@ func GenerateRandomString(length int) (string, error) {
 		result[i] = charset[randIndex.Int64()]
 	}
 	return string(result), nil
+}
+
+// Add this function to validate URLs
+func validateURL(input string) bool {
+	// Basic validation for URLs - check for common protocols, no spaces, etc.
+	if input == "" {
+		return false
+	}
+
+	// Check for valid URL protocols
+	validProtocols := []string{"http://", "https://"}
+	hasValidProtocol := false
+	for _, protocol := range validProtocols {
+		if strings.HasPrefix(input, protocol) {
+			hasValidProtocol = true
+			break
+		}
+	}
+
+	// Check for invalid characters
+	containsInvalidChars := strings.ContainsAny(input, " \t\n\r<>\"'\\%{}")
+
+	return hasValidProtocol && !containsInvalidChars
 }
