@@ -66,7 +66,7 @@ func init() {
 	var err error
 	DbNum, err = strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
-		log.Fatalf("Invalid Redis DB number: %v", err)
+		DbNum = 0 // Default to 0 if not set
 	} else if DbNum < 0 || DbNum > 16 {
 		log.Fatalf("Redis DB must be between 0-16: %v", DbNum)
 	}
