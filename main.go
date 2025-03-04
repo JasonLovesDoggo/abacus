@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -28,6 +27,8 @@ import (
 	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/gin-gonic/gin"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -41,11 +42,18 @@ var (
 	DbNum           = 0 // 0-16
 	StartTime       time.Time
 	Shard           string
+	logger          *zap.Logger
 )
 
 const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
 
 func init() {
+	var logErr error
+	logger, logErr = zap.NewProduction()
+	if logErr != nil {
+		panic(fmt.Sprintf("Failed to initialize logger: %v", logErr))
+	}
+
 	utils.LoadEnv()
 
 	if strings.ToLower(os.Getenv("DEBUG")) == "true" {
@@ -64,13 +72,14 @@ func init() {
 	Shard = namegen.New().Get()
 
 	ADDR := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-	log.Println("Listening to redis on: " + ADDR)
+	logger.Info("Listening to Redis", zap.String("address", ADDR))
 	var err error
 	DbNum, err = strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
 		DbNum = 0 // Default to 0 if not set
+		logger.Warn("Invalid REDIS_DB value, defaulting to 0", zap.Error(err))
 	} else if DbNum < 0 || DbNum > 16 {
-		log.Fatalf("Redis DB must be between 0-16: %v", DbNum)
+		logger.Fatal("Redis DB must be between 0-16", zap.Int("DbNum", DbNum))
 	}
 
 	Client = redis.NewClient(&redis.Options{
@@ -91,10 +100,10 @@ func setupMockRedis() {
 	// Used for testing, "miniredis" is a mock Redis server that runs in-memory for testing purposes only (no persistence)
 	mr, err := miniredis.Run()
 	if err != nil {
-		log.Fatalf("Failed to start miniredis: %v", err)
+		logger.Fatal("Failed to start miniredis", zap.Error(err))
 	}
 
-	log.Println("Using miniredis for testing")
+	logger.Info("Using miniredis for testing")
 
 	// Connect clients to miniredis
 	Client = redis.NewClient(&redis.Options{
@@ -140,13 +149,13 @@ func CreateRouter() *gin.Engine {
 	r.Use(gin.Recovery()) // recover from panics and returns a 500 error
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
-		log.Println("Analytics enabled")
+		logger.Info("Analytics enabled")
 	}
 	route := r.Group("")
 	route.Use(middleware.Stats())
 	if os.Getenv("RATE_LIMIT_ENABLED") == "true" {
 		route.Use(middleware.RateLimit(RateLimitClient))
-		log.Println("Rate limiting enabled")
+		logger.Info("Rate limiting enabled")
 	}
 	// Define routes
 	r.NoRoute(func(c *gin.Context) {
@@ -195,8 +204,10 @@ func CreateRouter() *gin.Engine {
 }
 
 func main() {
+	defer logger.Sync()
+
 	if is32Bit {
-		log.Fatal("This program is not supported on 32-bit systems, " +
+		logger.Fatal("This program is not supported on 32-bit systems, " +
 			"please run on a 64-bit system. If you wish for 32-bit support, " +
 			"please open an issue on the GitHub repository.\nexiting...")
 	}
@@ -212,37 +223,38 @@ func main() {
 		Addr:    ":" + os.Getenv("PORT"),
 		Handler: r,
 	}
-	fmt.Println("Listening on port " + os.Getenv("PORT"))
+	port := os.Getenv("PORT")
+	logger.Info("Listening on port", zap.String("port", port))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen: %s\n", err)
+			logger.Fatal("Failed to start server", zap.Error(err))
 		}
 	}()
 
 	// Wait for interrupt signal
 	<-ctx.Done()
-	log.Println("Shutdown signal received")
+	logger.Info("Shutdown signal received")
 
 	// Signal StatsManager to save and wait for completion
-	log.Println("Signaling stats manager to save data...")
+	logger.Info("Signaling stats manager to save data...")
 	utils.ServerClose <- true
 
 	// Wait for the response on the same channel
-	log.Println("Waiting for stats manager to complete...")
+	logger.Info("Waiting for stats manager to complete...")
 	<-utils.ServerClose
-	log.Println("Stats saving confirmed complete")
+	logger.Info("Stats saving confirmed complete")
 
 	// Now close Redis connections
-	log.Println("Closing Redis connections...")
+	logger.Info("Closing Redis connections...")
 	if Client != nil {
 		if err := Client.Close(); err != nil {
-			log.Printf("Error closing Redis client: %v", err)
+			logger.Error("Error closing Redis client", zap.Error(err))
 		}
 	}
 	if RateLimitClient != nil {
 		if err := RateLimitClient.Close(); err != nil {
-			log.Printf("Error closing Redis rate limit client: %v", err)
+			logger.Error("Error closing Redis rate limit client", zap.Error(err))
 		}
 	}
 
@@ -251,12 +263,12 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		logger.Fatal("Server shutdown failed", zap.Error(err))
 	}
 
 	<-shutdownCtx.Done()
 	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
-		log.Println("Shutdown timeout of 5 seconds exceeded")
+		logger.Warn("Shutdown timeout of 5 seconds exceeded")
 	}
-	log.Println("Server exiting")
+	logger.Info("Server exiting")
 }
