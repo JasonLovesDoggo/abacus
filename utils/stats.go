@@ -3,13 +3,13 @@ package utils
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 const (
@@ -23,6 +23,7 @@ var (
 	Total        int64 = 0
 	ServerClose        = make(chan bool, 1)
 	StatsManager *StatManager
+	logger, _           = zap.NewProduction()
 )
 
 // StatManager handles collecting and saving statistics
@@ -151,8 +152,7 @@ func (sm *StatManager) saveStats(force bool) {
 	// Execute Redis pipeline
 	_, err := pipe.Exec(ctx)
 	if err != nil {
-		// On error, restore the values
-		log.Printf("Error saving stats: %v", err)
+		logger.Error("Error saving stats", zap.Error(err))
 		atomic.AddInt64(&Total, totalCopy)
 
 		for path, count := range pathStats {
@@ -161,8 +161,7 @@ func (sm *StatManager) saveStats(force bool) {
 			}
 		}
 	} else {
-		log.Printf("Saved %d total stats across %d paths",
-			totalCopy, len(pathStats))
+		logger.Info("Stats saved", zap.Int64("total", totalCopy), zap.Int("paths", len(pathStats)))
 	}
 }
 
@@ -188,12 +187,10 @@ func (sm *StatManager) logStats() {
 	})
 
 	stats, _ := json.MarshalIndent(snapshot, "", "  ")
-	log.Printf("Stats Health Check:\n%s", string(stats))
+	logger.Info("Stats Health Check", zap.String("snapshot", string(stats)))
 
-	// Check if we should save stats based on totals
 	if snapshot.Total >= saveThreshold {
-		log.Printf("Total count high (%d/%d). Triggering save operation.",
-			snapshot.Total, saveThreshold)
+		logger.Info("High total count, triggering save", zap.Int64("total", snapshot.Total), zap.Int("threshold", saveThreshold))
 		go sm.saveStats(true)
 	}
 }

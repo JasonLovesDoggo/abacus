@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -20,7 +19,20 @@ import (
 	"github.com/jasonlovesdoggo/abacus/utils"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
+
+var logger *zap.Logger
+
+func init() {
+	// Initialize Zap logger
+	var err error
+	logger, err = zap.NewProduction()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
+	}
+	defer logger.Sync() // Ensures logs are flushed properly
+}
 
 func StreamValueView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
@@ -68,8 +80,7 @@ func StreamValueView(c *gin.Context) {
 			case utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{Key: dbKey, Client: clientChan}:
 				// Successfully sent cleanup signal
 			case <-time.After(500 * time.Millisecond):
-				// Timed out waiting to send cleanup signal
-				log.Printf("Warning: Timed out sending cleanup signal for %s", dbKey)
+				logger.Warn("Timed out sending cleanup signal", zap.String("key", dbKey))
 			}
 		} else {
 			cleanupMutex.Unlock()
@@ -85,7 +96,7 @@ func StreamValueView(c *gin.Context) {
 			cleanupDone = true
 			cleanupMutex.Unlock()
 
-			log.Printf("Client disconnected for key %s, cleaning up", dbKey)
+      logger.Info("Client disconnected, cleaning up", zap.String("key", dbKey))
 
 			// Signal the event server to remove this client
 			select {
@@ -93,7 +104,7 @@ func StreamValueView(c *gin.Context) {
 				// Successfully sent cleanup signal
 			case <-time.After(500 * time.Millisecond):
 				// Timed out waiting to send cleanup signal
-				log.Printf("Warning: Timed out sending cleanup signal for %s after disconnect", dbKey)
+        logger.Warn("Timed out sending cleanup signal after disconnect", zap.String("key", dbKey))
 			}
 		} else {
 			cleanupMutex.Unlock()
@@ -106,7 +117,7 @@ func StreamValueView(c *gin.Context) {
 		// Keep your exact format
 		_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
 		if err != nil {
-			log.Printf("Error writing to client: %v", err)
+			logger.Error("Error writing to client", zap.Error(err))
 			return
 		}
 		c.Writer.Flush()
@@ -124,7 +135,7 @@ func StreamValueView(c *gin.Context) {
 			// Keep your exact format
 			_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
 			if err != nil {
-				log.Printf("Error writing to client: %v", err)
+				logger.Error("Error writing to client", zap.Error(err))
 				return false
 			}
 			c.Writer.Flush()

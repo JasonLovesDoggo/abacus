@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"log"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type ValueEvent struct {
@@ -23,6 +24,7 @@ type KeyClientPair struct {
 	Key    string
 	Client chan int
 }
+
 
 func NewValueEventServer() *ValueEvent {
 	event := &ValueEvent{
@@ -46,7 +48,10 @@ func (v *ValueEvent) listen() {
 			}
 			v.TotalClients[newClient.Key][newClient.Client] = true
 			v.Mu.Unlock()
-			log.Printf("Client added for key %s. Total clients: %d", newClient.Key, len(v.TotalClients[newClient.Key]))
+			logger.Info("Client added",
+				zap.String("key", newClient.Key),
+				zap.Int("total_clients", len(v.TotalClients[newClient.Key])),
+			)
 
 		case closedClient := <-v.ClosedClients:
 			v.Mu.Lock()
@@ -57,12 +62,12 @@ func (v *ValueEvent) listen() {
 					// Close channel safely
 					close(closedClient.Client)
 
-					log.Printf("Removed client for key %s", closedClient.Key)
+					logger.Info("Removed client", zap.String("key", closedClient.Key))
 
 					// Clean up key map if no more clients
 					if len(clients) == 0 {
 						delete(v.TotalClients, closedClient.Key)
-						log.Printf("No more clients for key %s, removed key entry", closedClient.Key)
+						logger.Info("No more clients, removed key entry", zap.String("key", closedClient.Key))
 					}
 				}
 			}
@@ -110,7 +115,7 @@ func (v *ValueEvent) listen() {
 						case v.ClosedClients <- KeyClientPair{Key: key, Client: client}:
 							// Success on retry
 						default:
-							log.Printf("Failed to remove client for key %s even after retry", key)
+							logger.Warn("Failed to remove client even after retry", zap.String("key", key))
 						}
 					}(keyValue.Key, failedClient)
 				}
@@ -133,6 +138,12 @@ func (v *ValueEvent) CountClientsForKey(key string) int {
 var ValueEventServer *ValueEvent
 
 func init() {
+  var err error
+	logger, err = zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+
 	ValueEventServer = NewValueEventServer()
 }
 
@@ -143,7 +154,7 @@ func SetStream(dbKey string, newValue int) {
 	case ValueEventServer.Message <- KeyValue{Key: dbKey, Value: newValue}:
 		// Message sent successfully
 	default:
-		log.Printf("Warning: Message channel full, update for key %s dropped", dbKey)
+		logger.Warn("Message channel full, update dropped", zap.String("key", dbKey))
 	}
 }
 
@@ -168,6 +179,9 @@ func CloseStream(dbKey string) {
 	}
 
 	if len(channelsToClose) > 0 {
-		log.Printf("Closed all streams for key %s (%d clients)", dbKey, len(channelsToClose))
+		logger.Info("Closed all streams for",
+			zap.String("key", dbKey),
+			zap.Int("clients", len(channelsToClose)),
+		)
 	}
 }

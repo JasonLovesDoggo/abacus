@@ -42,7 +42,6 @@ var (
 	DbNum           = 0 // 0-16
 	StartTime       time.Time
 	Shard           string
-	logger          *zap.Logger
 )
 
 const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
