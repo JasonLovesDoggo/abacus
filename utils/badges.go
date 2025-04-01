@@ -8,31 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/essentialkaos/go-badge"
 	"github.com/gin-gonic/gin"
+	"github.com/jasonlovesdoggo/abacus/lib/badge"
 )
-
-func getHexFromColor(color string) string {
-	color = strings.ToLower(strings.TrimSpace(color))
-
-	colorMap := map[string]string{
-		"blue":        "#007ec6",
-		"brightgreen": "#4c1",
-		"green":       "#97ca00",
-		"grey":        "#555",
-		"lightgrey":   "#9f9f9f",
-		"orange":      "#fe7d37",
-		"red":         "#e05d44",
-		"yellow":      "#dfb317",
-		"yellowgreen": "#a4a61d",
-	}
-
-	if hex, exists := colorMap[color]; exists {
-		return hex
-	}
-
-	return "#000000" // Default fallback color
-}
 
 func getFontFilePath(font string) (string, error) {
 	execDir, _ := os.Getwd()
@@ -64,15 +42,20 @@ func getFontFilePath(font string) (string, error) {
 }
 
 func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
-	bgColor := getHexFromColor(c.DefaultQuery("bgcolor", "blue"))
+	bgColor := c.DefaultQuery("bgcolor", "#007ec6") // Default to blue
 	text := c.DefaultQuery("text", "counter")
 	style := strings.ToLower(c.DefaultQuery("style", "flat"))
-	fontSize := c.DefaultQuery("fontsize", "11")
+	fontSizeStr := c.DefaultQuery("fontsize", "11")
 	font := strings.ToLower(c.DefaultQuery("font", "verdana"))
 
-	fontSizeInt, err := strconv.Atoi(fontSize)
-	if err != nil || fontSizeInt <= 3 { // font sizes 2 or lower can result in panics due to go's ttf library
-		fontSizeInt = 11 // Fallback to default if invalid
+	// Validate color is a hex code
+	if !strings.HasPrefix(bgColor, "#") {
+		return nil, fmt.Errorf("bgcolor must be a hex code starting with #")
+	}
+
+	fontSize, err := strconv.ParseFloat(fontSizeStr, 64)
+	if err != nil || fontSize <= 0 { // font sizes too small can result in rendering issues
+		fontSize = 11 // Fallback to default if invalid
 	}
 
 	filePath, err := getFontFilePath(font)
@@ -80,34 +63,45 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 		log.Printf("Error: Failed to get font file path: %v", err)
 		return nil, err
 	}
-	generator, err := badge.NewGenerator(filePath, fontSizeInt)
+
+	// Create badge generator with the specified font and size
+	generator, err := badge.NewGenerator(filePath, fontSize)
 	if err != nil {
-		log.Printf("Error: Failed to initialize badge generator.")
+		log.Printf("Error: Failed to initialize badge generator: %v", err)
 		return nil, err
 	}
 
-	badgeStylesRegular := map[string]func(string, string, string) []byte{
-		"flat":        generator.GenerateFlat,
-		"flat-square": generator.GenerateFlatSquare,
-		"plastic":     generator.GeneratePlastic,
-	}
+	// Adjust padding based on font size to maintain proportions
+	paddingH := float64(fontSize) * 0.75
+	paddingV := float64(fontSize) * 0.45
+	generator.SetPadding(paddingH, paddingV)
 
-	badgeStylesSimple := map[string]func(string, string) []byte{
-		"plastic-simple":     generator.GeneratePlasticSimple,
-		"flat-simple":        generator.GenerateFlatSimple,
-		"flat-square-simple": generator.GenerateFlatSquareSimple,
-	}
-
+	// Convert count to string for badge
 	countString := strconv.FormatInt(count, 10)
 
-	if generateFunc, exists := badgeStylesRegular[style]; exists {
-		return generateFunc(text, countString, bgColor), nil
+	// Check if it's a simple badge style (without left text)
+	if badge.IsSimpleStyle(style) {
+		switch style {
+		case "plastic-simple":
+			return generator.GeneratePlasticSimple(countString, bgColor), nil
+		case "flat-square-simple":
+			return generator.GenerateFlatSquareSimple(countString, bgColor), nil
+		case "flat-simple":
+			return generator.GenerateFlatSimple(countString, bgColor), nil
+		default:
+			return generator.GenerateFlatSimple(countString, bgColor), nil
+		}
 	}
 
-	if generateFunc, exists := badgeStylesSimple[style]; exists {
-		return generateFunc(countString, bgColor), nil
+	// Regular badge styles with both left and right text
+	switch style {
+	case "plastic":
+		return generator.GeneratePlastic(text, countString, bgColor), nil
+	case "flat-square":
+		return generator.GenerateFlatSquare(text, countString, bgColor), nil
+	case "flat":
+		return generator.GenerateFlat(text, countString, bgColor), nil
+	default:
+		return generator.GenerateFlat(text, countString, bgColor), nil
 	}
-
-	// default
-	return generator.GenerateFlat(text, countString, bgColor), nil
 }
