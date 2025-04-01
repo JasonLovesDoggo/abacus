@@ -207,47 +207,6 @@ func TestTemplateRendering(t *testing.T) {
 	}
 }
 
-// TestSimpleStyles tests specifically the simple style badges
-func TestSimpleStyles(t *testing.T) {
-	// Path to a test font
-	wd, _ := os.Getwd()
-	fontPath := filepath.Join(wd, "testdata", "Verdana.ttf")
-
-	// Skip if font doesn't exist
-	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
-		t.Skip("Test font not found, skipping test")
-	}
-
-	generator, err := NewGenerator(fontPath, 11)
-	if err != nil {
-		t.Fatalf("Failed to create generator: %v", err)
-	}
-
-	simpleStyles := []struct {
-		style  string
-		method func(string, string) []byte
-	}{
-		{"flat-simple", generator.GenerateFlatSimple},
-		{"flat-square-simple", generator.GenerateFlatSquareSimple},
-		{"plastic-simple", generator.GeneratePlasticSimple},
-	}
-
-	for _, test := range simpleStyles {
-		t.Run("SimpleStyle_"+test.style, func(t *testing.T) {
-			svg := test.method("123", "#007ec6")
-			if len(svg) == 0 {
-				t.Errorf("Failed to generate %s badge", test.style)
-			}
-
-			// Ensure badge is generated correctly
-			svgString := string(svg)
-			if !strings.Contains(svgString, "123") {
-				t.Errorf("Text content missing in %s badge", test.style)
-			}
-		})
-	}
-}
-
 // TestFontExistence verifies that all fonts referenced in the utility exist
 func TestFontExistence(t *testing.T) {
 	// Define the font mappings (copied from utils.getFontFilePath)
@@ -288,4 +247,91 @@ func TestFontExistence(t *testing.T) {
 	if len(missingFonts) > 0 {
 		t.Errorf("The following fonts are missing: %s", strings.Join(missingFonts, ", "))
 	}
+}
+
+// TestSimpleStyles tests specifically the simple style badges
+func TestSimpleStyles(t *testing.T) {
+	// Path to a test font
+	wd, _ := os.Getwd()
+	fontPath := filepath.Join(wd, "testdata", "Verdana.ttf")
+
+	// Skip if font doesn't exist
+	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
+		t.Skip("Test font not found, skipping test")
+	}
+
+	generator, err := NewGenerator(fontPath, 11)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+
+	// Test various text content to ensure proper handling
+	testTexts := []string{
+		"123",
+		"Count: 123456",
+		"A very long text that should still render properly",
+		"!@#$%^&*()", // Special characters
+	}
+
+	simpleStyles := []string{
+		"flat-simple",
+		"flat-square-simple",
+		"plastic-simple",
+	}
+
+	for _, style := range simpleStyles {
+		for _, text := range testTexts {
+			t.Run(style+"_"+text, func(t *testing.T) {
+				params := BadgeParams{
+					LeftText:   "",
+					RightText:  text,
+					Color:      "#007ec6",
+					FontSize:   11,
+					FontFamily: "Test Font,sans-serif",
+				}
+
+				svg, err := generator.Generate(params, style)
+				if err != nil {
+					t.Errorf("Failed to generate %s badge with text '%s': %v", style, text, err)
+				}
+
+				if len(svg) == 0 {
+					t.Errorf("Generated empty SVG for %s badge with text '%s'", style, text)
+				}
+
+				// Verify text content is included
+				svgString := string(svg)
+				if !strings.Contains(svgString, text) {
+					t.Errorf("Text content '%s' missing in %s badge", text, style)
+				}
+
+				// Verify basic SVG structure
+				if !strings.Contains(svgString, "<svg") || !strings.Contains(svgString, "</svg>") {
+					t.Errorf("Generated SVG is malformed for %s badge with text '%s'", style, text)
+				}
+			})
+		}
+	}
+
+	// Test the helper functions directly
+	t.Run("GenerateSimpleFunctions", func(t *testing.T) {
+		// Test each simple badge generation function
+		text := "TestText"
+		color := "#ff5500"
+
+		flatSimple := generator.GenerateFlatSimple(text, color)
+		if len(flatSimple) == 0 {
+			t.Error("GenerateFlatSimple returned empty SVG")
+		}
+
+		flatSquareSimple := generator.GenerateFlatSquareSimple(text, color)
+		if len(flatSquareSimple) == 0 {
+			t.Error("GenerateFlatSquareSimple returned empty SVG")
+		}
+
+		plasticSimple := generator.GeneratePlasticSimple(text, color)
+		if len(plasticSimple) == 0 {
+			t.Error("GeneratePlasticSimple returned empty SVG")
+		}
+	})
 }

@@ -68,7 +68,10 @@ func NewGenerator(fontPath string, fontSize float64) (*Generator, error) {
 
 	// Create template functions
 	funcMap := template.FuncMap{
-		"div": func(a, b int) int {
+		"div": func(a float64, b int) float64 {
+			return a / float64(b)
+		},
+		"divInt": func(a int, b int) int {
 			return a / b
 		},
 		"calcRadius": func(height float64) float64 {
@@ -167,7 +170,10 @@ func NewGeneratorFromFS(fsys fs.FS, fontPath string, fontSize float64) (*Generat
 
 	// Create template functions
 	funcMap := template.FuncMap{
-		"div": func(a, b int) int {
+		"div": func(a float64, b int) float64 {
+			return a / float64(b)
+		},
+		"divInt": func(a int, b int) int {
 			return a / b
 		},
 		"calcRadius": func(height float64) float64 {
@@ -291,6 +297,8 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 		"RightTextX": leftWidth + (rightWidth / 2),
 		"FontSize":   g.fontSize,
 		"FontFamily": fontFamily,
+		// For simple templates, calculate the center position
+		"CenterX": rightWidth / 2,
 	}
 
 	// Select the appropriate template
