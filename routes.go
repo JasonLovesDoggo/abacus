@@ -168,6 +168,43 @@ func HitView(c *gin.Context) {
 	}
 }
 
+func HitShieldView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+	// Get data from Redis
+	val, err := Client.Incr(context.Background(), dbKey).Result()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
+	// check if val is is greater than the max value of an int
+	if val > math.MaxInt {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Value is too large. Max value is " + strconv.Itoa(math.
+			MaxInt), "message": "If you are seeing this error and have a legitimate use case, please contact me @ abacus@jasoncameron.dev"})
+		return
+	}
+	go func() {
+		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
+		// see above) to ensure val is within the range of an int.
+		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+	}()
+
+	badgeSVG, err := utils.GenerateBadge(c, val)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get SVG data."})
+		return
+	}
+	c.Header("Content-Type", "image/svg+xml")
+	c.Data(http.StatusOK, "image/svg+xml", badgeSVG)
+}
+
 func GetView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
@@ -199,6 +236,45 @@ func GetView(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"value": intval})
 
 	}
+}
+
+func GetShieldView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+	// Get data from Redis
+	val, err := Client.Get(context.Background(), dbKey).Result()
+
+	if errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
+		return
+	} else if err != nil { // Other Redis errors
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
+
+	go func() {
+		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+	}()
+
+	intval, convErr := strconv.ParseInt(val, 10, 64)
+	if convErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Invalid data format."})
+		return
+	}
+
+	badgeSVG, err := utils.GenerateBadge(c, intval)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get SVG data."})
+		return
+	}
+	c.Header("Content-Type", "image/svg+xml")
+	c.Data(http.StatusOK, "image/svg+xml", badgeSVG)
 }
 
 func CreateRandomView(c *gin.Context) {

@@ -419,7 +419,7 @@ function clicked() {
     <h3 class="endpoint">/docs</h3>
     <p>Redirects to the API documentation.</p>
 
-    <h3 class="endpoint">/get/:namespace/*key</h3>
+    <h3 class="endpoint">/get/:namespace/:key</h3>
     <p>Retrieve the current value of a counter. Optionally specify the namespace.</p>
     <pre class="info">If you want to use JSONP, please pass in the callback via the ?callback query param (e.g. ?callback=myjsfunction) </pre>
 
@@ -430,9 +430,47 @@ function clicked() {
 <a href="https://abacus.jasoncameron.dev/get/nonexisting" target="_blank">GET /get/nonexisting</a>
 ⇒ 404 { "error": "Key not found" }</pre>
 
-    <h3 class="endpoint">/hit/:namespace/*key</h3>
+    <h3 class="endpoint">/get/:namespace/:key/shield</h3>
+    <p>Retrieve the current value of a counter as a SVG shield.</p>
+    <h4>Query Parameters:</h4>
+    <p>The API provides some query parameters to modify the appearance of the rendered SVG shield.</p>
+    <ul>
+        <li><code>bgcolor=blue</code>: Background color (default: blue)
+            <ul>
+                <li>Available colors: blue, brightgreen, green, grey, lightgrey, orange, red, yellow, yellowgreen</li>
+            </ul>
+        </li>
+        <li><code>text=counter</code>: Custom text label for the shield (default: counter)</li>
+        <li><code>style=flat</code>: Shield style (default: flat)
+            <ul>
+                <li>Regular styles: flat, flat-square, plastic</li>
+                <li>Simple styles: plastic-simple, flat-simple, flat-square-simple</li>
+            </ul>
+        </li>
+        <li><code>fontsize=11</code>: Font size for the shield text (default: 11) - must be a positive integer</li>
+        <li><code>font=verdana</code>: Font family for the shield text (default: verdana)
+            <ul>
+                <li>Available fonts: verdana, verdana-bold, verdana-bold-italic, arial, arial-bold, arial-italic, arial-bold-italic, courier-new</li>
+            </ul>
+        </li>
+    </ul>
+
+    <pre class="info">Note that the <code>text</code> parameter will be ignored if a simple style is chosen as it only displays the counter.</pre>
+
+
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/get/test/default/shield" target="_blank">GET /get/test/default/shield</a>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="82" height="20" role="img" aria-label="counter: 1"><title>counter: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="82" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="30" height="20" fill="#007ec6"/><rect width="82" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="660" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="200">1</text><text x="660" y="140" transform="scale(.1)" fill="#fff" textLength="200">1</text></g></svg></pre>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/get/test/default/shield?bgcolor=red&text=visits&style=plastic&fontsize=12&font=arial" target="_blank">GET /get/test/default/shield?bgcolor=red&text=visits&style=plastic&fontsize=12&font=arial</a>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="53" height="18" role="img" aria-label="visits: 1"><title>visits: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".1" stop-color="#aaa" stop-opacity=".1"/><stop offset=".9" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient><clipPath id="r"><rect width="53" height="18" rx="4" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="37" height="18" fill="#555"/><rect x="37" width="16" height="18" fill="#e05d44"/><rect width="53" height="18" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Arial,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="120"><text aria-hidden="true" x="195" y="140" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="266">visits</text><text x="195" y="130" transform="scale(.1)" fill="#fff" textLength="266">visits</text><text aria-hidden="true" x="440" y="140" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="66">1</text><text x="440" y="130" transform="scale(.1)" fill="#fff" textLength="66">1</text></g></svg></pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/get/nonexisting/default/shield" target="_blank">GET /get/nonexisting/default/shield</a>
+⇒ 404 { "error": "Key not found" }</pre>
+
+    <h3 class="endpoint">/hit/:namespace/:key</h3>
     <p>Increment a counter by 1 and return the new value. If the counter doesn't exist, it will be created. Optionally
-        specify a namespace</p>
+        specify a namespace.</p>
 
     <pre class="info">If you want to use JSONP, please pass in the callback via the ?callback query param (e.g. ?callback=myjsfunction) </pre>
 
@@ -443,6 +481,42 @@ function clicked() {
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/hit/nonexisting" target="_blank">GET /hit/nonexisting</a> (key is created)
 ⇒ 200 { "value": 1 }</pre>
+
+    <h3 class="endpoint">/hit/:namespace/:key/shield</h3>
+      <p>Increment a counter by 1 and return the new value as a SVG shield. If the counter doesn't exist, it will be created.</p>
+    <h4>Query Parameters:</h4>
+    <p>The API provides some query parameters to modify the appearance of the rendered SVG shield.</p>
+    <ul>
+        <li><code>bgcolor=blue</code>: Background color (default: blue)
+            <ul>
+                <li>Available colors: blue, brightgreen, green, grey, lightgrey, orange, red, yellow, yellowgreen</li>
+            </ul>
+        </li>
+        <li><code>text=counter</code>: Custom text label for the shield (default: counter)</li>
+        <li><code>style=flat</code>: Shield style (default: flat)
+            <ul>
+                <li>Regular styles: flat, flat-square, plastic</li>
+                <li>Simple styles: plastic-simple, flat-simple, flat-square-simple</li>
+            </ul>
+        </li>
+        <li><code>fontsize=11</code>: Font size for the shield text (default: 11) - must be a positive integer</li>
+        <li><code>font=verdana</code>: Font family for the shield text (default: verdana)
+            <ul>
+                <li>Available fonts: verdana, verdana-bold, verdana-bold-italic, arial, arial-bold, arial-italic, arial-bold-italic, courier-new</li>
+            </ul>
+        </li>
+    </ul>
+    <pre class="info">Note that the <code>text</code> parameter will be ignored if a simple style is chosen as it only displays the counter.</pre>
+
+
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits/shield" target="_blank">GET /hit/mysite.com/visits/shield</a> (value was 35)
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="75" height="20" role="img" aria-label="counter: 36"><title>counter: 36</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="75" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="23" height="20" fill="#007ec6"/><rect width="75" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="625" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="133">36</text><text x="625" y="140" transform="scale(.1)" fill="#fff" textLength="133">36</text></g></svg>
+</pre>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/hit/nonexisting/test/shield" target="_blank">GET /hit/nonexisting/test/shield</a> (key is created)
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="68" height="20" role="img" aria-label="counter: 1"><title>counter: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="68" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="16" height="20" fill="#007ec6"/><rect width="68" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="590" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="66">1</text><text x="590" y="140" transform="scale(.1)" fill="#fff" textLength="66">1</text></g></svg></div>
+</pre>
 
     <h3 class="endpoint">/stream/:namespace/*key</h3>
     <p>Stream updates to a counter's value using <a

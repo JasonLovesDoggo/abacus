@@ -169,9 +169,11 @@ func CreateRouter() *gin.Engine {
 		route.GET("/stats", StatsView)
 	}
 	{ // Public Routes
-		route.GET("/get/:namespace/*key", GetView)
+		route.GET("/get/:namespace/:key", GetView)
+		route.GET("/get/:namespace/:key/shield", GetShieldView)
 
-		route.GET("/hit/:namespace/*key", HitView)
+		route.GET("/hit/:namespace/:key/shield", HitShieldView)
+		route.GET("/hit/:namespace/:key", HitView)
 		route.GET("/stream/:namespace/*key", middleware.SSEMiddleware(), StreamValueView)
 
 		route.POST("/create/:namespace/*key", CreateView)
