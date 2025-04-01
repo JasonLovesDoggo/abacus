@@ -10,14 +10,14 @@ const (
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
   <mask id="round">
-    <rect width="{{.TotalWidth}}" height="{{.Height}}" rx="3" fill="#fff"/>
+    <rect width="{{.TotalWidth}}" height="{{.Height}}" rx="{{calcRadius .Height}}" fill="#fff"/>
   </mask>
   <g mask="url(#round)">
     <rect width="{{.LeftWidth}}" height="{{.Height}}" fill="#555"/>
     <rect x="{{.LeftWidth}}" width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
     <rect width="{{.TotalWidth}}" height="{{.Height}}" fill="url(#smooth)"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     {{if ne .LeftText ""}}
       <text x="{{.LeftTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
       <text x="{{.LeftTextX}}" y="{{.TextY}}" fill="#fff">{{.LeftText}}</text>
@@ -35,7 +35,7 @@ const (
     <rect width="{{.LeftWidth}}" height="{{.Height}}" fill="#555"/>
     <rect x="{{.LeftWidth}}" width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     {{if ne .LeftText ""}}
       <text x="{{.LeftTextX}}" y="{{.TextY}}">{{.LeftText}}</text>
     {{end}}
@@ -52,14 +52,14 @@ const (
     <stop offset="100%" stop-opacity=".1"/>
   </linearGradient>
   <mask id="round">
-    <rect width="{{.TotalWidth}}" height="{{.Height}}" rx="3" fill="#fff"/>
+    <rect width="{{.TotalWidth}}" height="{{.Height}}" rx="{{calcRadius .Height}}" fill="#fff"/>
   </mask>
   <g mask="url(#round)">
     <rect width="{{.LeftWidth}}" height="{{.Height}}" fill="#555"/>
     <rect x="{{.LeftWidth}}" width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
     <rect width="{{.TotalWidth}}" height="{{.Height}}" fill="url(#gradient)"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     {{if ne .LeftText ""}}
       <text x="{{.LeftTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
       <text x="{{.LeftTextX}}" y="{{.TextY}}">{{.LeftText}}</text>
@@ -78,13 +78,13 @@ const (
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
   <mask id="round">
-    <rect width="{{.RightWidth}}" height="{{.Height}}" rx="3" fill="#fff"/>
+    <rect width="{{.RightWidth}}" height="{{.Height}}" rx="{{calcRadius .Height}}" fill="#fff"/>
   </mask>
   <g mask="url(#round)">
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="url(#smooth)"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     <text x="{{.RightWidth | div 2}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.RightWidth | div 2}}" y="{{.TextY}}" fill="#fff">{{.RightText}}</text>
   </g>
@@ -97,7 +97,7 @@ const (
   <g>
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     <text x="{{.RightWidth | div 2}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>
 </svg>
@@ -111,13 +111,13 @@ const (
     <stop offset="100%" stop-opacity=".1"/>
   </linearGradient>
   <mask id="round">
-    <rect width="{{.RightWidth}}" height="{{.Height}}" rx="3" fill="#fff"/>
+    <rect width="{{.RightWidth}}" height="{{.Height}}" rx="{{calcRadius .Height}}" fill="#fff"/>
   </mask>
   <g mask="url(#round)">
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="{{.Color}}"/>
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="url(#gradient)"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="{{.FontSize}}">
+  <g fill="#fff" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     <text x="{{.RightWidth | div 2}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.RightWidth | div 2}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>

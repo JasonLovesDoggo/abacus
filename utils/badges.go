@@ -8,41 +8,78 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jasonlovesdoggo/abacus/lib/badge"
+
+	"github.com/gin-gonic/gin"
 )
 
-func getFontFilePath(font string) (string, error) {
+// FontInfo contains details about a font
+type FontInfo struct {
+	FileName   string
+	FontFamily string
+}
+
+// Map of supported fonts with their file names and CSS font-family values
+var fontMap = map[string]FontInfo{
+	"verdana": {
+		FileName:   "Verdana.ttf",
+		FontFamily: "Verdana,DejaVu Sans,sans-serif",
+	},
+	"verdana-bold": {
+		FileName:   "Verdana_Bold.ttf",
+		FontFamily: "Verdana Bold,DejaVu Sans,sans-serif",
+	},
+	"verdana-bold-italic": {
+		FileName:   "Verdana_Bold_Italic.ttf",
+		FontFamily: "Verdana Bold Italic,DejaVu Sans,sans-serif",
+	},
+	"arial": {
+		FileName:   "Arial.ttf",
+		FontFamily: "Arial,Helvetica,sans-serif",
+	},
+	"arial-bold": {
+		FileName:   "Arial_Bold.ttf",
+		FontFamily: "Arial Bold,Helvetica,sans-serif",
+	},
+	"arial-italic": {
+		FileName:   "Arial_Italic.ttf",
+		FontFamily: "Arial Italic,Helvetica,sans-serif",
+	},
+	"arial-bold-italic": {
+		FileName:   "Arial_Bold_Italic.ttf",
+		FontFamily: "Arial Bold Italic,Helvetica,sans-serif",
+	},
+	"courier-new": {
+		FileName:   "Courier_New.ttf",
+		FontFamily: "Courier New,Courier,monospace",
+	},
+	"jetbrains-mono": {
+		FileName:   "JetbrainsMono.ttf",
+		FontFamily: "JetBrains Mono,Courier New,monospace",
+	},
+}
+
+func getFontFilePath(font string) (string, string, error) {
 	execDir, _ := os.Getwd()
-	fontMap := map[string]string{
-		"verdana":             "Verdana.ttf",
-		"verdana-bold":        "Verdana_Bold.ttf",
-		"verdana-bold-italic": "Verdana_Bold_Italic.ttf",
-		"arial":               "Arial.ttf",
-		"arial-bold":          "Arial_Bold.ttf",
-		"arial-italic":        "Arial_Italic.ttf",
-		"arial-bold-italic":   "Arial_Bold_Italic.ttf",
-		"courier-new":         "Courier_New.ttf",
-		"jetbrains-mono":      "JetbrainsMono.ttf",
-	}
 
-	fontFile, exists := fontMap[font]
+	fontInfo, exists := fontMap[font]
 	if !exists {
-		fontFile = "Verdana.ttf" // Default
+		// Default to Verdana if font name not found
+		fontInfo = fontMap["verdana"]
 	}
 
-	fontPath := filepath.Join(execDir, "assets", "fonts", fontFile)
+	fontPath := filepath.Join(execDir, "assets", "fonts", fontInfo.FileName)
 
 	// Check if font file exists
 	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("font file not found: %s", fontPath)
+		return "", "", fmt.Errorf("font file not found: %s", fontPath)
 	}
 
-	return fontPath, nil
+	return fontPath, fontInfo.FontFamily, nil
 }
 
 func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
-	bgColor := c.DefaultQuery("bgcolor", "#007ec6") // Default to blue
+	bgColor := c.DefaultQuery("bgcolor", "#007ec6")
 	text := c.DefaultQuery("text", "counter")
 	style := strings.ToLower(c.DefaultQuery("style", "flat"))
 	fontSizeStr := c.DefaultQuery("fontsize", "11")
@@ -54,11 +91,12 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	}
 
 	fontSize, err := strconv.ParseFloat(fontSizeStr, 64)
-	if err != nil || fontSize <= 0 { // font sizes too small can result in rendering issues
+	if err != nil || fontSize <= 3 { // font sizes too small can result in rendering issues
 		fontSize = 11 // Fallback to default if invalid
 	}
 
-	filePath, err := getFontFilePath(font)
+	// Get font path and font family
+	filePath, fontFamily, err := getFontFilePath(font)
 	if err != nil {
 		log.Printf("Error: Failed to get font file path: %v", err)
 		return nil, err
@@ -71,9 +109,12 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 		return nil, err
 	}
 
+	// Set the font family explicitly
+	generator.SetFontFamily(fontFamily)
+
 	// Adjust padding based on font size to maintain proportions
-	paddingH := float64(fontSize) * 0.75
-	paddingV := float64(fontSize) * 0.45
+	paddingH := fontSize * 0.75
+	paddingV := fontSize * 0.45
 	generator.SetPadding(paddingH, paddingV)
 
 	// Convert count to string for badge
@@ -82,11 +123,11 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	// Check if it's a simple badge style (without left text)
 	if badge.IsSimpleStyle(style) {
 		switch style {
-		case "plastic-simple":
+		case string(badge.StylePlasticSimple):
 			return generator.GeneratePlasticSimple(countString, bgColor), nil
-		case "flat-square-simple":
+		case string(badge.StyleFlatSquareSimple):
 			return generator.GenerateFlatSquareSimple(countString, bgColor), nil
-		case "flat-simple":
+		case string(badge.StyleFlatSimple):
 			return generator.GenerateFlatSimple(countString, bgColor), nil
 		default:
 			return generator.GenerateFlatSimple(countString, bgColor), nil
@@ -95,11 +136,11 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 
 	// Regular badge styles with both left and right text
 	switch style {
-	case "plastic":
+	case string(badge.StylePlastic):
 		return generator.GeneratePlastic(text, countString, bgColor), nil
-	case "flat-square":
+	case string(badge.StyleFlatSquare):
 		return generator.GenerateFlatSquare(text, countString, bgColor), nil
-	case "flat":
+	case string(badge.StyleFlat):
 		return generator.GenerateFlat(text, countString, bgColor), nil
 	default:
 		return generator.GenerateFlat(text, countString, bgColor), nil

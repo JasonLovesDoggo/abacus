@@ -6,7 +6,6 @@ require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.4
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/anandvarma/namegen v1.1.1
-	github.com/essentialkaos/go-badge v1.4.1
 	github.com/gin-contrib/cors v1.7.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/goccy/go-json v0.10.5

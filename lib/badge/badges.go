@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/golang/freetype"
@@ -23,20 +25,24 @@ type Generator struct {
 	paddingH    float64
 	paddingV    float64
 	lineSpacing float64
+	fontFamily  string // Added field for custom font family
 }
 
 // BadgeParams contains the parameters for badge generation
 type BadgeParams struct {
-	LeftText  string
-	RightText string
-	Color     string
-	FontSize  float64
+	LeftText   string
+	RightText  string
+	Color      string
+	FontSize   float64
+	FontFamily string // Added for custom font family
 }
 
 // Text dimensions calculation result
 type textDimensions struct {
-	Width  float64
-	Height float64
+	Width   float64
+	Height  float64
+	Ascent  float64
+	Descent float64
 }
 
 // NewGenerator creates a new badge generator
@@ -57,6 +63,27 @@ func NewGenerator(fontPath string, fontSize float64) (*Generator, error) {
 		return nil, fmt.Errorf("unable to parse font: %w", err)
 	}
 
+	// Determine font family from filename
+	fontFamily := determineFontFamily(fontPath)
+
+	// Create template functions
+	funcMap := template.FuncMap{
+		"div": func(a, b int) int {
+			return a / b
+		},
+		"calcRadius": func(height float64) float64 {
+			// Make radius proportional to height, with min/max limits
+			radius := height * 0.15 // 15% of height
+			if radius < 2 {
+				return 2 // Minimum radius
+			}
+			if radius > 5 {
+				return 5 // Maximum radius
+			}
+			return radius
+		},
+	}
+
 	// Load templates
 	templates := make(map[string]*template.Template)
 
@@ -71,11 +98,7 @@ func NewGenerator(fontPath string, fontSize float64) (*Generator, error) {
 	}
 
 	for name, tmplString := range styles {
-		tmpl, err := template.New(name).Funcs(template.FuncMap{
-			"div": func(a, b int) int {
-				return a / b
-			},
-		}).Parse(tmplString)
+		tmpl, err := template.New(name).Funcs(funcMap).Parse(tmplString)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse template for style %s: %w", name, err)
 		}
@@ -87,10 +110,38 @@ func NewGenerator(fontPath string, fontSize float64) (*Generator, error) {
 		fontSize:    fontSize,
 		dpi:         72,
 		templates:   templates,
-		paddingH:    8,   // Horizontal padding
-		paddingV:    5,   // Vertical padding
-		lineSpacing: 1.2, // Line spacing multiplier
+		paddingH:    8,          // Horizontal padding
+		paddingV:    5,          // Vertical padding
+		lineSpacing: 1.2,        // Line spacing multiplier
+		fontFamily:  fontFamily, // Set font family
 	}, nil
+}
+
+// determineFontFamily gets the font family name from the font file path
+func determineFontFamily(fontPath string) string {
+	// Extract font name from path
+	filename := filepath.Base(fontPath)
+
+	// Map of known font files to their proper CSS family names
+	fontFamilyMap := map[string]string{
+		"Verdana.ttf":             "Verdana,DejaVu Sans,sans-serif",
+		"Verdana_Bold.ttf":        "Verdana Bold,DejaVu Sans,sans-serif",
+		"Verdana_Bold_Italic.ttf": "Verdana Bold Italic,DejaVu Sans,sans-serif",
+		"Arial.ttf":               "Arial,Helvetica,sans-serif",
+		"Arial_Bold.ttf":          "Arial Bold,Helvetica,sans-serif",
+		"Arial_Italic.ttf":        "Arial Italic,Helvetica,sans-serif",
+		"Arial_Bold_Italic.ttf":   "Arial Bold Italic,Helvetica,sans-serif",
+		"Courier_New.ttf":         "Courier New,Courier,monospace",
+		"JetbrainsMono.ttf":       "JetBrains Mono,Courier New,monospace",
+	}
+
+	if family, exists := fontFamilyMap[filename]; exists {
+		return family
+	}
+
+	// Default fallback: strip extension and use as family with fallbacks
+	baseName := strings.TrimSuffix(filename, filepath.Ext(filename))
+	return baseName + ",DejaVu Sans,Verdana,Geneva,sans-serif"
 }
 
 // NewGeneratorFromFS creates a new badge generator from a filesystem
@@ -111,6 +162,27 @@ func NewGeneratorFromFS(fsys fs.FS, fontPath string, fontSize float64) (*Generat
 		return nil, fmt.Errorf("unable to parse font: %w", err)
 	}
 
+	// Determine font family from filename
+	fontFamily := determineFontFamily(fontPath)
+
+	// Create template functions
+	funcMap := template.FuncMap{
+		"div": func(a, b int) int {
+			return a / b
+		},
+		"calcRadius": func(height float64) float64 {
+			// Make radius proportional to height, with min/max limits
+			radius := height * 0.15 // 15% of height
+			if radius < 2 {
+				return 2 // Minimum radius
+			}
+			if radius > 5 {
+				return 5 // Maximum radius
+			}
+			return radius
+		},
+	}
+
 	// Load templates
 	templates := make(map[string]*template.Template)
 
@@ -125,11 +197,7 @@ func NewGeneratorFromFS(fsys fs.FS, fontPath string, fontSize float64) (*Generat
 	}
 
 	for name, tmplString := range styles {
-		tmpl, err := template.New(name).Funcs(template.FuncMap{
-			"div": func(a, b int) int {
-				return a / b
-			},
-		}).Parse(tmplString)
+		tmpl, err := template.New(name).Funcs(funcMap).Parse(tmplString)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse template for style %s: %w", name, err)
 		}
@@ -141,9 +209,10 @@ func NewGeneratorFromFS(fsys fs.FS, fontPath string, fontSize float64) (*Generat
 		fontSize:    fontSize,
 		dpi:         72,
 		templates:   templates,
-		paddingH:    8,   // Horizontal padding
-		paddingV:    5,   // Vertical padding
-		lineSpacing: 1.2, // Line spacing multiplier
+		paddingH:    8,          // Horizontal padding
+		paddingV:    5,          // Vertical padding
+		lineSpacing: 1.2,        // Line spacing multiplier
+		fontFamily:  fontFamily, // Set font family
 	}, nil
 }
 
@@ -171,11 +240,15 @@ func (g *Generator) calculateTextDimensions(text string) textDimensions {
 
 	// Calculate height based on font metrics
 	metrics := face.Metrics()
-	heightFloat := float64(metrics.Ascent+metrics.Descent) / 64.0
+	ascentFloat := float64(metrics.Ascent) / 64.0
+	descentFloat := float64(metrics.Descent) / 64.0
+	heightFloat := ascentFloat + descentFloat
 
 	return textDimensions{
-		Width:  widthFloat,
-		Height: heightFloat,
+		Width:   widthFloat,
+		Height:  heightFloat,
+		Ascent:  ascentFloat,
+		Descent: descentFloat,
 	}
 }
 
@@ -194,8 +267,15 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 	rightWidth := rightDims.Width + (g.paddingH * 2)
 	height := max(leftDims.Height, rightDims.Height)*g.lineSpacing + (g.paddingV * 2)
 
-	// Calculate text vertical positions to center text vertically
-	textY := height - g.paddingV - ((height-(g.paddingV*2))/2 - leftDims.Height/2)
+	// Calculate text vertical positions for proper centering
+	// This formula centers text vertically regardless of font size
+	textY := g.paddingV + leftDims.Ascent + ((height - g.paddingV*2 - leftDims.Height) / 2)
+
+	// Use provided font family or fallback to the generator's default
+	fontFamily := params.FontFamily
+	if fontFamily == "" {
+		fontFamily = g.fontFamily
+	}
 
 	// Prepare template data
 	data := map[string]interface{}{
@@ -210,6 +290,7 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 		"LeftTextX":  leftWidth / 2,
 		"RightTextX": leftWidth + (rightWidth / 2),
 		"FontSize":   g.fontSize,
+		"FontFamily": fontFamily,
 	}
 
 	// Select the appropriate template
@@ -230,10 +311,11 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 // GenerateFlat generates a flat style badge
 func (g *Generator) GenerateFlat(leftText, rightText, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  leftText,
-		RightText: rightText,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   leftText,
+		RightText:  rightText,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "flat")
 
 	if err != nil {
@@ -248,10 +330,11 @@ func (g *Generator) GenerateFlat(leftText, rightText, color string) []byte {
 // GenerateFlatSquare generates a flat-square style badge
 func (g *Generator) GenerateFlatSquare(leftText, rightText, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  leftText,
-		RightText: rightText,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   leftText,
+		RightText:  rightText,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "flat-square")
 
 	if err != nil {
@@ -266,10 +349,11 @@ func (g *Generator) GenerateFlatSquare(leftText, rightText, color string) []byte
 // GeneratePlastic generates a plastic style badge
 func (g *Generator) GeneratePlastic(leftText, rightText, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  leftText,
-		RightText: rightText,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   leftText,
+		RightText:  rightText,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "plastic")
 
 	if err != nil {
@@ -286,10 +370,11 @@ func (g *Generator) GeneratePlastic(leftText, rightText, color string) []byte {
 // GenerateFlatSimple generates a simple flat badge with single text
 func (g *Generator) GenerateFlatSimple(text, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  "",
-		RightText: text,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   "",
+		RightText:  text,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "flat-simple")
 
 	if err != nil {
@@ -304,10 +389,11 @@ func (g *Generator) GenerateFlatSimple(text, color string) []byte {
 // GenerateFlatSquareSimple generates a simple flat-square badge with single text
 func (g *Generator) GenerateFlatSquareSimple(text, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  "",
-		RightText: text,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   "",
+		RightText:  text,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "flat-square-simple")
 
 	if err != nil {
@@ -322,10 +408,11 @@ func (g *Generator) GenerateFlatSquareSimple(text, color string) []byte {
 // GeneratePlasticSimple generates a simple plastic badge with single text
 func (g *Generator) GeneratePlasticSimple(text, color string) []byte {
 	badge, err := g.Generate(BadgeParams{
-		LeftText:  "",
-		RightText: text,
-		Color:     color,
-		FontSize:  g.fontSize,
+		LeftText:   "",
+		RightText:  text,
+		Color:      color,
+		FontSize:   g.fontSize,
+		FontFamily: g.fontFamily,
 	}, "plastic-simple")
 
 	if err != nil {
@@ -354,4 +441,9 @@ func (g *Generator) SetPadding(horizontal, vertical float64) {
 	if vertical > 0 {
 		g.paddingV = vertical
 	}
+}
+
+// SetFontFamily allows changing the font family
+func (g *Generator) SetFontFamily(fontFamily string) {
+	g.fontFamily = fontFamily
 }

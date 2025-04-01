@@ -29,12 +29,12 @@ type BadgeStyle string
 
 // Available badge styles
 const (
-	StyleFlat          BadgeStyle = "flat"
-	StyleFlatSquare    BadgeStyle = "flat-square"
-	StylePlastic       BadgeStyle = "plastic"
-	StyleFlatSimple    BadgeStyle = "flat-simple"
-	StyleSquareSimple  BadgeStyle = "flat-square-simple"
-	StylePlasticSimple BadgeStyle = "plastic-simple"
+	StyleFlat             BadgeStyle = "flat"
+	StyleFlatSquare       BadgeStyle = "flat-square"
+	StylePlastic          BadgeStyle = "plastic"
+	StyleFlatSimple       BadgeStyle = "flat-simple"
+	StyleFlatSquareSimple BadgeStyle = "flat-square-simple" // Fixed name to match template key
+	StylePlasticSimple    BadgeStyle = "plastic-simple"
 )
 
 // IsSimpleStyle checks if the badge style is a simple one (no left text)
