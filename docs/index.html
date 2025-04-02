@@ -71,7 +71,8 @@
                     hsl(211deg 74% 38%) 0%,
                     hsl(271deg 39% 45%) 38%,
                     hsl(321deg 86% 36%) 100%
-            );            box-shadow: inset 0 -2px 2px -2px rgba(0, 0, 0, 0.8);
+            );
+            box-shadow: inset 0 -2px 2px -2px rgba(0, 0, 0, 0.8);
         }
 
         .header .title {
@@ -218,17 +219,18 @@
 </header>
 <section class="container">
     <h2 id="abacus">Abacus - <a href="https://github.com/JasonLovesDoggo/abacus" target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github"
+             viewBox="0 0 16 16">
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
         </svg>
-    </a> </h2>
+    </a></h2>
     <p>
         This API allows you to create simple numeric counters. IaaS, Integer as a Service.
     </p>
 
     <p style="margin-bottom: 2px">It goes down to:</p>
     <ul>
-        <li>Create & Increment counter </li>
+        <li>Create & Increment counter</li>
         <li>View counter's data</li>
     </ul>
     <p>All counters are “unlisted”—accessible if you know the key but not publicly listed anywhere.</p>
@@ -240,7 +242,8 @@
 
     <p>
         So far, <code data-stat-id="keys">...</code> keys have been created and there have been <code
-            data-stat-id="command_total">...</code> requests served. <code data-stat-id="hits">...</code> of those have been hits and <code data-stat-id="gets">...</code> have been gets. Abacus is currently on version <code
+            data-stat-id="command_total">...</code> requests served. <code data-stat-id="hits">...</code> of those have
+        been hits and <code data-stat-id="gets">...</code> have been gets. Abacus is currently on version <code
             data-stat-id="version">...</code>.<br>
         This page has been visited <code id="visits">...</code> times.
     </p>
@@ -259,29 +262,31 @@
     <p>Let’s say you want to display the amount of page views a site received.</p>
     <div class="highlight html">&lt;div id="visits"&gt;...&lt;/div&gt;</div>
     <pre class="info">Remember to change <input type="text" id="domain" value="mysite.com" maxlength="64"
-                                                                            autocomplete="off" autocorrect="off" autocapitalize="off"
-                                                                            spellcheck="false"> <label
+                                                autocomplete="off" autocorrect="off" autocapitalize="off"
+                                                spellcheck="false"> <label
             for="domain">with your site's <b>domain</b></label>.</pre>
     <h4>Using JSONP</h4>
-      <div class="highlight html">&lt;script&gt;
-function cb(response) {
-    document.getElementById('visits').innerText = response.value;
-}
-&lt;/script&gt;
-&lt;script async src="https://abacus.jasoncameron.dev/hit/mysite.com/visits?callback=cb">&lt;/script&gt;</div>
-      <h4>Using XHR</h4>
-      <div class="highlight js"> var xhr = new XMLHttpRequest();
-   xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
-   xhr.responseType = "json";
-   xhr.onload = function() {
-      document.getElementById('visits').innerText = this.response.value;
-   }
-   xhr.send();</div>
+    <div class="highlight html">&lt;script&gt;
+        function cb(response) {
+        document.getElementById('visits').innerText = response.value;
+        }
+        &lt;/script&gt;
+        &lt;script async src="https://abacus.jasoncameron.dev/hit/mysite.com/visits?callback=cb">&lt;/script&gt;
+    </div>
+    <h4>Using XHR</h4>
+    <div class="highlight js"> var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits");
+        xhr.responseType = "json";
+        xhr.onload = function() {
+        document.getElementById('visits').innerText = this.response.value;
+        }
+        xhr.send();
+    </div>
     <h4>Using jQuery</h4>
     <div class="highlight js">$.getJSON("https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/visits",
-    function(response) {
+        function(response) {
         $("#visits").text(response.value);
-});
+        });
     </div>
     <h3>Multiple pages</h3>
     <p>If you want to have a counter for each individual page you can replace <code>visits</code> with a unique
@@ -303,17 +308,17 @@ function cb(response) {
     <h3>Counting events</h3>
     <p>You can use the API to count any kind of stuff, let’s say:</p>
     <div class="highlight html">&lt;button onclick="clicked()"&gt;Press Me!&lt;/button&gt;
-&lt;script&gt;
-function clicked() {
-    let xhr = new XMLHttpRequest();
-    xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
-    xhr.responseType = "json";
-    xhr.onload = function() {
+        &lt;script&gt;
+        function clicked() {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://abacus.jasoncameron.dev/hit/<code class="mysite">mysite.com</code>/awesomeclick");
+        xhr.responseType = "json";
+        xhr.onload = function() {
         alert(`This button has been clicked ${this.response.value} times!`);
-    }
-    xhr.send();
-}
-&lt;/script&gt;
+        }
+        xhr.send();
+        }
+        &lt;/script&gt;
     </div>
     <button onclick="clicked()">Press Me!</button>
     <script>
@@ -369,7 +374,8 @@ function clicked() {
 </pre>
     <h2>Can I delete a key?</h2>
     <p>If you originally created the key using the <a href="#create">/create endpoint</a>, then yes, you can delete the
-        key and all data associated with it by using the <a href="#delete"> /delete</a> endpoint along with your admin key.</p>
+        key and all data associated with it by using the <a href="#delete"> /delete</a> endpoint along with your admin
+        key.</p>
     <h2>Will I blow up the Abacus server?</h2>
     <p>Abacus is using <a href="https://valkey.io/" target="_blank">Valkey</a> as a database, a rapid key-value
         solution.<br>If you are planning to make <b>tens of thousands</b> of requests, I'll be glad if you <a
@@ -432,41 +438,106 @@ function clicked() {
 
     <h3 class="endpoint">/get/:namespace/:key/shield</h3>
     <p>Retrieve the current value of a counter as a SVG shield.</p>
-    <h4>Query Parameters:</h4>
-    <p>The API provides some query parameters to modify the appearance of the rendered SVG shield.</p>
+    <h4 id="shieldquery">Query Parameters:</h4>
     <ul>
-        <li><code>bgcolor=blue</code>: Background color (default: blue)
+        <li><code>bgcolor=007ec6</code>: Background color (default: 007ec6 - blue)
             <ul>
-                <li>Available colors: blue, brightgreen, green, grey, lightgrey, orange, red, yellow, yellowgreen</li>
+                <li>Accepts hex color codes (with or without # prefix) like: 007ec6, ff5500, etc.</li>
+            </ul>
+        </li>
+        <li><code>textcolor=fff</code>: Text color (default: fff - white)
+            <ul>
+                <li>Accepts hex color codes (with or without # prefix) like: fff, 000, etc.</li>
             </ul>
         </li>
         <li><code>text=counter</code>: Custom text label for the shield (default: counter)</li>
         <li><code>style=flat</code>: Shield style (default: flat)
             <ul>
                 <li>Regular styles: flat, flat-square, plastic</li>
-                <li>Simple styles: plastic-simple, flat-simple, flat-square-simple</li>
+                <li>Simple styles (only show count value): flat-simple, flat-square-simple, plastic-simple</li>
             </ul>
         </li>
-        <li><code>fontsize=11</code>: Font size for the shield text (default: 11) - must be greater 2</li>
+        <li><code>fontsize=11</code>: Font size for the shield text (default: 11)
+            <ul>
+                <li>Must be greater than 3 for proper rendering</li>
+                <li>Automatically scales badge elements to maintain proper proportions</li>
+            </ul>
+        </li>
         <li><code>font=verdana</code>: Font family for the shield text (default: verdana)
             <ul>
-                <li>Available fonts: verdana, verdana-bold, verdana-bold-italic, arial, arial-bold, arial-italic, arial-bold-italic, courier-new, jetbrains-mono</li>
+                <li>Available fonts: verdana, verdana-bold, verdana-bold-italic, arial, arial-bold, arial-italic,
+                    arial-bold-italic, courier-new, jetbrains-mono
+                </li>
             </ul>
         </li>
     </ul>
 
-    <pre class="info">Note that the <code>text</code> parameter will be ignored if a simple style is chosen as it only displays the counter.</pre>
-
+    <pre class="info">Note that the <code>text</code> parameter will be ignored if a simple style is chosen as those styles only display the counter value.</pre>
 
     <pre class="success">
 <a href="https://abacus.jasoncameron.dev/get/test/default/shield" target="_blank">GET /get/test/default/shield</a>
-⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="82" height="20" role="img" aria-label="counter: 1"><title>counter: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="82" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="30" height="20" fill="#007ec6"/><rect width="82" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="660" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="200">1</text><text x="660" y="140" transform="scale(.1)" fill="#fff" textLength="200">1</text></g></svg></pre>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="82" height="20"
+              role="img" aria-label="counter: 1"><title>counter: 1</title><linearGradient id="s" x2="0" y2="100%"><stop
+            offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath
+            id="r"><rect width="82" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52"
+                                                                                                            height="20"
+                                                                                                            fill="#555"/><rect
+            x="52" width="30" height="20" fill="#007ec6"/><rect width="82" height="20" fill="url(#s)"/></g><g
+            fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif"
+            text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101"
+                                                                      fill-opacity=".3" transform="scale(.1)"
+                                                                      textLength="408">counter</text><text x="270"
+                                                                                                           y="140"
+                                                                                                           transform="scale(.1)"
+                                                                                                           fill="#fff"
+                                                                                                           textLength="408">counter</text><text
+            aria-hidden="true" x="660" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)"
+            textLength="200">1</text><text x="660" y="140" transform="scale(.1)" fill="#fff"
+                                           textLength="200">1</text></g></svg></pre>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/get/test/default/shield?bgcolor=red&text=visits&style=plastic&fontsize=12&font=arial" target="_blank">GET /get/test/default/shield?bgcolor=red&text=visits&style=plastic&fontsize=12&font=arial</a>
-⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="53" height="18" role="img" aria-label="visits: 1"><title>visits: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".1" stop-color="#aaa" stop-opacity=".1"/><stop offset=".9" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient><clipPath id="r"><rect width="53" height="18" rx="4" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="37" height="18" fill="#555"/><rect x="37" width="16" height="18" fill="#e05d44"/><rect width="53" height="18" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Arial,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="120"><text aria-hidden="true" x="195" y="140" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="266">visits</text><text x="195" y="130" transform="scale(.1)" fill="#fff" textLength="266">visits</text><text aria-hidden="true" x="440" y="140" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="66">1</text><text x="440" y="130" transform="scale(.1)" fill="#fff" textLength="66">1</text></g></svg></pre>
+<a href="https://abacus.jasoncameron.dev/get/test/default/shield?bgcolor=e05d44&text=visits&style=plastic&fontsize=12&font=arial&textcolor=ffff00"
+   target="_blank">GET /get/test/default/shield?bgcolor=e05d44&text=visits&style=plastic&fontsize=12&font=arial&textcolor=ffff00</a>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="53" height="18"
+              role="img" aria-label="visits: 1"><title>visits: 1</title><linearGradient id="s" x2="0" y2="100%"><stop
+            offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".1" stop-color="#aaa" stop-opacity=".1"/><stop
+            offset=".9" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000"
+                                                                   stop-opacity=".5"/></linearGradient><clipPath id="r"><rect
+            width="53" height="18" rx="4" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="37" height="18"
+                                                                                               fill="#555"/><rect x="37"
+                                                                                                                  width="16"
+                                                                                                                  height="18"
+                                                                                                                  fill="#e05d44"/><rect
+            width="53" height="18" fill="url(#s)"/></g><g fill="#ffff00" text-anchor="middle"
+                                                          font-family="Arial,Geneva,DejaVu Sans,sans-serif"
+                                                          text-rendering="geometricPrecision" font-size="120"><text
+            aria-hidden="true" x="195" y="140" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="266">visits</text><text
+            x="195" y="130" transform="scale(.1)" fill="#ffff00" textLength="266">visits</text><text aria-hidden="true"
+                                                                                                     x="440" y="140"
+                                                                                                     fill="#010101"
+                                                                                                     fill-opacity=".3"
+                                                                                                     transform="scale(.1)"
+                                                                                                     textLength="66">1</text><text
+            x="440" y="130" transform="scale(.1)" fill="#ffff00" textLength="66">1</text></g></svg></pre>
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/get/test/default/shield?style=flat-simple&bgcolor=4c1" target="_blank">GET /get/test/default/shield?style=flat-simple&bgcolor=4c1</a>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="20"><linearGradient
+            id="smooth" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1"
+                                                                                                     stop-opacity=".1"/></linearGradient><mask
+            id="round"><rect width="30" height="20" rx="3" fill="#fff"/></mask><g mask="url(#round)"><rect width="30"
+                                                                                                           height="20"
+                                                                                                           fill="#4c1"/><rect
+            width="30" height="20" fill="url(#smooth)"/></g><g fill="#fff" text-anchor="middle"
+                                                               font-family="Verdana,DejaVu Sans,sans-serif"
+                                                               font-size="11"><text x="15" y="15" fill="#010101"
+                                                                                    fill-opacity=".3">1</text><text
+            x="15" y="15">1</text></g></svg></pre>
+    <pre class="fail">
+<a href="https://abacus.jasoncameron.dev/get/test/default/shield?bgcolor=purple" target="_blank">GET /get/test/default/shield?bgcolor=purple</a>
+⇒ 400 { "error": "invalid background color: 'purple' is not a valid hex color (should be like 'fff' or 'ff5500')" }</pre>
     <pre class="fail">
 <a href="https://abacus.jasoncameron.dev/get/nonexisting/default/shield" target="_blank">GET /get/nonexisting/default/shield</a>
 ⇒ 404 { "error": "Key not found" }</pre>
+
 
     <h3 class="endpoint">/hit/:namespace/:key</h3>
     <p>Increment a counter by 1 and return the new value. If the counter doesn't exist, it will be created. Optionally
@@ -483,40 +554,51 @@ function clicked() {
 ⇒ 200 { "value": 1 }</pre>
 
     <h3 class="endpoint">/hit/:namespace/:key/shield</h3>
-      <p>Increment a counter by 1 and return the new value as a SVG shield. If the counter doesn't exist, it will be created.</p>
+    <p>Increment a counter by 1 and return the new value as a SVG shield. If the counter doesn't exist, it will be
+        created.</p>
     <h4>Query Parameters:</h4>
-    <p>The API provides some query parameters to modify the appearance of the rendered SVG shield.</p>
+    <p>Supports the same query parameters as the <a href="#shieldquery"><code>/get/:namespace/:key/shield</code></a>
+        endpoint:</p>
     <ul>
-        <li><code>bgcolor=blue</code>: Background color (default: blue)
-            <ul>
-                <li>Available colors: blue, brightgreen, green, grey, lightgrey, orange, red, yellow, yellowgreen</li>
-            </ul>
-        </li>
+        <li><code>bgcolor=007ec6</code>: Background color (default: 007ec6 - blue)</li>
+        <li><code>textcolor=fff</code>: Text color (default: fff - white)</li>
         <li><code>text=counter</code>: Custom text label for the shield (default: counter)</li>
-        <li><code>style=flat</code>: Shield style (default: flat)
-            <ul>
-                <li>Regular styles: flat, flat-square, plastic</li>
-                <li>Simple styles: plastic-simple, flat-simple, flat-square-simple</li>
-            </ul>
+        <li><code>style=flat</code>: Shield style (flat, flat-square, plastic, flat-simple, flat-square-simple,
+            plastic-simple)
         </li>
-        <li><code>fontsize=11</code>: Font size for the shield text (default: 11) - must greater than 2</li>
-        <li><code>font=verdana</code>: Font family for the shield text (default: verdana)
-            <ul>
-                <li>Available fonts: verdana, verdana-bold, verdana-bold-italic, arial, arial-bold, arial-italic, arial-bold-italic, courier-new, jetbrains-mono</li>
-            </ul>
-        </li>
+        <li><code>fontsize=11</code>: Font size for the shield text (must be > 3)</li>
+        <li><code>font=verdana</code>: Font family for the shield text</li>
     </ul>
-    <pre class="info">Note that the <code>text</code> parameter will be ignored if a simple style is chosen as it only displays the counter.</pre>
-
+    <pre class="info">For improved badge appearance at different font sizes, padding and corner radius are automatically scaled proportionally.</pre>
 
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits/shield" target="_blank">GET /hit/mysite.com/visits/shield</a> (value was 35)
-⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="75" height="20" role="img" aria-label="counter: 36"><title>counter: 36</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="75" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="23" height="20" fill="#007ec6"/><rect width="75" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="625" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="133">36</text><text x="625" y="140" transform="scale(.1)" fill="#fff" textLength="133">36</text></g></svg>
+<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits/shield"
+   target="_blank">GET /hit/mysite.com/visits/shield</a> (value was 35)
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="75" height="20"
+              role="img" aria-label="counter: 36"><title>counter: 36</title><linearGradient id="s" x2="0" y2="100%"><stop
+            offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath
+            id="r"><rect width="75" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52"
+                                                                                                            height="20"
+                                                                                                            fill="#555"/><rect
+            x="52" width="23" height="20" fill="#007ec6"/><rect width="75" height="20" fill="url(#s)"/></g><g
+            fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif"
+            text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101"
+                                                                      fill-opacity=".3" transform="scale(.1)"
+                                                                      textLength="408">counter</text><text x="270"
+                                                                                                           y="140"
+                                                                                                           transform="scale(.1)"
+                                                                                                           fill="#fff"
+                                                                                                           textLength="408">counter</text><text
+            aria-hidden="true" x="625" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="133">36</text><text
+            x="625" y="140" transform="scale(.1)" fill="#fff" textLength="133">36</text></g></svg>
 </pre>
     <pre class="success">
-<a href="https://abacus.jasoncameron.dev/hit/nonexisting/test/shield" target="_blank">GET /hit/nonexisting/test/shield</a> (key is created)
-⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="68" height="20" role="img" aria-label="counter: 1"><title>counter: 1</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="68" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="52" height="20" fill="#555"/><rect x="52" width="16" height="20" fill="#007ec6"/><rect width="68" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="270" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="408">counter</text><text x="270" y="140" transform="scale(.1)" fill="#fff" textLength="408">counter</text><text aria-hidden="true" x="590" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="66">1</text><text x="590" y="140" transform="scale(.1)" fill="#fff" textLength="66">1</text></g></svg></div>
-</pre>
+<a href="https://abacus.jasoncameron.dev/hit/mysite.com/visits/shield?style=flat-square-simple&bgcolor=97ca00&textcolor=000"
+   target="_blank">GET /hit/mysite.com/visits/shield?style=flat-square-simple&bgcolor=97ca00&textcolor=000</a>
+⇒ 200<br><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="23" height="20"><g><rect
+            width="23" height="20" fill="#97ca00"/></g><g fill="#000" text-anchor="middle"
+                                                          font-family="Verdana,DejaVu Sans,sans-serif" font-size="11"><text
+            x="11.5" y="15">37</text></g></svg></pre>
 
     <h3 class="endpoint">/stream/:namespace/*key</h3>
     <p>Stream updates to a counter's value using <a
@@ -652,11 +734,12 @@ GET /stats/
 
     <footer style="text-align: center; gap: 2rem; display: flex; flex-direction: row; align-items: center; justify-content: center">
         <h1 style="all: unset">
-        made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
-            href="https://countapi.xyz">CountAPI</a>.</h1>
+            made by <a href="https://jasoncameron.dev">Jason Cameron</a> as a replacement for <a
+                href="https://countapi.xyz">CountAPI</a>.</h1>
         <h2 style="all: unset">
             <a href="https://github.com/JasonLovesDoggo/abacus" target="_blank">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github"
+                     viewBox="0 0 16 16">
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
                 </svg>
             </a>
