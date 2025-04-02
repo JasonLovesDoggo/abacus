@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jasonlovesdoggo/abacus/lib"
 )
 
 func TestBadgeGeneration(t *testing.T) {
@@ -219,27 +221,16 @@ func TestTemplateRendering(t *testing.T) {
 
 // TestFontExistence verifies that all fonts referenced in the utility exist
 func TestFontExistence(t *testing.T) {
-	// Define the font mappings (copied from utils.getFontFilePath)
-	fontMap := map[string]string{
-		"verdana":             "Verdana.ttf",
-		"verdana-bold":        "Verdana_Bold.ttf",
-		"verdana-bold-italic": "Verdana_Bold_Italic.ttf",
-		"arial":               "Arial.ttf",
-		"arial-bold":          "Arial_Bold.ttf",
-		"arial-italic":        "Arial_Italic.ttf",
-		"arial-bold-italic":   "Arial_Bold_Italic.ttf",
-		"courier-new":         "Courier_New.ttf",
-		"jetbrains-mono":      "JetbrainsMono.ttf",
-	}
-
 	// Get current working directory
 	execDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
 
+	projectDir := filepath.Dir(filepath.Dir(execDir))
+
 	// Check if the fonts directory exists
-	fontsDir := filepath.Join(execDir, "assets", "fonts")
+	fontsDir := filepath.Join(projectDir, "assets", "fonts")
 	if _, err := os.Stat(fontsDir); os.IsNotExist(err) {
 		t.Skip("Fonts directory doesn't exist, skipping font existence test")
 		return
@@ -247,10 +238,10 @@ func TestFontExistence(t *testing.T) {
 
 	// Check each font file
 	var missingFonts []string
-	for fontName, fontFile := range fontMap {
-		fontPath := filepath.Join(fontsDir, fontFile)
+	for fontName, fontFile := range lib.FontMap {
+		fontPath := filepath.Join(fontsDir, fontFile.FileName)
 		if _, err := os.Stat(fontPath); os.IsNotExist(err) {
-			missingFonts = append(missingFonts, fontName+" ("+fontFile+")")
+			missingFonts = append(missingFonts, fontName+" ("+fontFile.FileName+")")
 		}
 	}
 
