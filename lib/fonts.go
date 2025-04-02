@@ -47,7 +47,7 @@ var FontMap = map[string]FontInfo{
 		FontFamily: "Courier New,Courier,monospace",
 	},
 	"jetbrains-mono": {
-		FileName:   "JetbrainsMono.ttf",
+		FileName:   "JetBrainsMono.ttf",
 		FontFamily: "JetBrains Mono,Courier New,monospace",
 	},
 }
