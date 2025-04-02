@@ -198,7 +198,7 @@ func HitShieldView(c *gin.Context) {
 
 	badgeSVG, err := utils.GenerateBadge(c, val)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get SVG data."})
+		c.JSON(http.StatusInternalServerError, gin.H{"error:": err.Error()})
 		return
 	}
 	c.Header("Content-Type", "image/svg+xml")

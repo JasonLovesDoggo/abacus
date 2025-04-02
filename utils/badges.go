@@ -79,16 +79,23 @@ func getFontFilePath(font string) (string, string, error) {
 }
 
 func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
-	bgColor := c.DefaultQuery("bgcolor", "007ec6") // Default blue, no # prefix
+	bgColor := c.DefaultQuery("bgcolor", "007ec6")
+	textColor := c.DefaultQuery("textcolor", "fff")
 	text := c.DefaultQuery("text", "counter")
 	style := strings.ToLower(c.DefaultQuery("style", "flat"))
 	fontSizeStr := c.DefaultQuery("fontsize", "11")
 	font := strings.ToLower(c.DefaultQuery("font", "verdana"))
 
-	// validate bgColor
+	// Validate and parse background color
 	bgColor, err := badge.ValidateColor(bgColor)
 	if err != nil {
-		return nil, fmt.Errorf("invalid bgcolor: %w", err)
+		return nil, err
+	}
+
+	// Validate and parse text color
+	textColor, err = badge.ValidateColor(textColor)
+	if err != nil {
+		return nil, err
 	}
 
 	// Parse font size
@@ -124,47 +131,29 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 
 	// Check if it's a simple badge style (without left text)
 	if badge.IsSimpleStyle(style) {
-		var badgeSVG []byte
-		var badgeErr error
-
 		switch style {
 		case "plastic-simple":
-			badgeSVG = generator.GeneratePlasticSimple(countString, bgColor)
+			return generator.GeneratePlasticSimple(countString, bgColor, textColor)
 		case "flat-square-simple":
-			badgeSVG = generator.GenerateFlatSquareSimple(countString, bgColor)
+			return generator.GenerateFlatSquareSimple(countString, bgColor, textColor)
 		case "flat-simple":
-			badgeSVG = generator.GenerateFlatSimple(countString, bgColor)
+			return generator.GenerateFlatSimple(countString, bgColor, textColor)
 		default:
 			// Default to flat-simple if the style is unknown but contains "-simple"
-			badgeSVG = generator.GenerateFlatSimple(countString, bgColor)
+			return generator.GenerateFlatSimple(countString, bgColor, textColor)
 		}
-
-		if len(badgeSVG) == 0 {
-			return nil, fmt.Errorf("failed to generate %s badge, please check the color format", style)
-		}
-
-		return badgeSVG, badgeErr
 	}
 
 	// Regular badge styles with both left and right text
-	var badgeSVG []byte
-	var badgeErr error
-
 	switch style {
 	case "plastic":
-		badgeSVG = generator.GeneratePlastic(text, countString, bgColor)
+		return generator.GeneratePlastic(text, countString, bgColor, textColor)
 	case "flat-square":
-		badgeSVG = generator.GenerateFlatSquare(text, countString, bgColor)
+		return generator.GenerateFlatSquare(text, countString, bgColor, textColor)
 	case "flat":
-		badgeSVG = generator.GenerateFlat(text, countString, bgColor)
+		return generator.GenerateFlat(text, countString, bgColor, textColor)
 	default:
 		// Default to flat style for unknown styles
-		badgeSVG = generator.GenerateFlat(text, countString, bgColor)
+		return generator.GenerateFlat(text, countString, bgColor, textColor)
 	}
-
-	if len(badgeSVG) == 0 {
-		return nil, fmt.Errorf("failed to generate %s badge, please check the color format", style)
-	}
-
-	return badgeSVG, badgeErr
 }

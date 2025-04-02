@@ -35,7 +35,10 @@ func TestBadgeGeneration(t *testing.T) {
 			}
 
 			// Test regular badge
-			svg := generator.GenerateFlat("test", "123", "#007ec6")
+			svg, err := generator.GenerateFlat("test", "123", "#007ec6", "#fff")
+			if err != nil {
+				t.Errorf("Failed to generate flat badge with font size %f: %v", fontSize, err)
+			}
 			if len(svg) == 0 {
 				t.Errorf("Failed to generate flat badge with font size %f", fontSize)
 			}
@@ -54,7 +57,7 @@ func TestBadgeGeneration(t *testing.T) {
 			// Test other badge styles
 			styles := []string{"flat-square", "plastic", "flat-simple", "flat-square-simple", "plastic-simple"}
 			for _, style := range styles {
-				params := BadgeParams{
+				params := Params{
 					LeftText:   "test",
 					RightText:  "123",
 					Color:      "#007ec6",
@@ -132,7 +135,7 @@ func TestInvalidColorGeneration(t *testing.T) {
 	}
 
 	// Test with invalid color
-	params := BadgeParams{
+	params := Params{
 		LeftText:  "test",
 		RightText: "123",
 		Color:     "red", // Not a hex code
@@ -168,7 +171,7 @@ func TestTemplateRendering(t *testing.T) {
 
 	for _, style := range styles {
 		t.Run("Template_"+style, func(t *testing.T) {
-			params := BadgeParams{
+			params := Params{
 				LeftText:   "test",
 				RightText:  "123",
 				Color:      "#007ec6",
@@ -289,7 +292,7 @@ func TestSimpleStyles(t *testing.T) {
 	for _, style := range simpleStyles {
 		for _, text := range testTexts {
 			t.Run(style+"_"+text, func(t *testing.T) {
-				params := BadgeParams{
+				params := Params{
 					LeftText:   "",
 					RightText:  text,
 					Color:      "#007ec6",
@@ -326,19 +329,129 @@ func TestSimpleStyles(t *testing.T) {
 		text := "TestText"
 		color := "#ff5500"
 
-		flatSimple := generator.GenerateFlatSimple(text, color)
+		flatSimple, err := generator.GenerateFlatSimple(text, color, color)
+		if err != nil {
+			t.Errorf("GenerateFlatSimple returned error: %v", err)
+		}
 		if len(flatSimple) == 0 {
 			t.Error("GenerateFlatSimple returned empty SVG")
 		}
 
-		flatSquareSimple := generator.GenerateFlatSquareSimple(text, color)
+		flatSquareSimple, err := generator.GenerateFlatSquareSimple(text, color, color)
+		if err != nil {
+			t.Errorf("GenerateFlatSquareSimple returned error: %v", err)
+		}
 		if len(flatSquareSimple) == 0 {
 			t.Error("GenerateFlatSquareSimple returned empty SVG")
 		}
 
-		plasticSimple := generator.GeneratePlasticSimple(text, color)
+		plasticSimple, err := generator.GeneratePlasticSimple(text, color, color)
+		if err != nil {
+			t.Errorf("GeneratePlasticSimple returned error: %v", err)
+		}
 		if len(plasticSimple) == 0 {
 			t.Error("GeneratePlasticSimple returned empty SVG")
 		}
 	})
+}
+
+func TestTextColorSupport(t *testing.T) {
+	// Path to a test font
+	wd, _ := os.Getwd()
+	fontPath := filepath.Join(wd, "testdata", "Verdana.ttf")
+
+	// Skip if font doesn't exist
+	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
+		t.Skip("Test font not found, skipping test")
+	}
+
+	generator, err := NewGenerator(fontPath, 11)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+
+	// Test different text colors
+	testColors := []struct {
+		bgColor   string
+		textColor string
+	}{
+		{"007ec6", "fff"},    // Standard white on blue
+		{"ff0000", "000"},    // Black on red
+		{"ffffff", "ff0000"}, // Red on white
+		{"000000", "ffff00"}, // Yellow on black
+	}
+
+	for _, colors := range testColors {
+		t.Run("TextColor_"+colors.textColor+"_on_"+colors.bgColor, func(t *testing.T) {
+			// Test with regular badge
+			svg, err := generator.GenerateFlat("test", "123", colors.bgColor, colors.textColor)
+			if err != nil {
+				t.Errorf("Failed to generate badge with text color %s: %v", colors.textColor, err)
+			}
+
+			if len(svg) == 0 {
+				t.Errorf("Generated empty SVG for text color %s", colors.textColor)
+			}
+
+			// Verify text color is applied
+			svgString := string(svg)
+			expectedTextColor := "#" + colors.textColor
+			if !strings.HasPrefix(colors.textColor, "#") {
+				expectedTextColor = "#" + colors.textColor
+			}
+
+			if !strings.Contains(svgString, `fill="`+expectedTextColor+`"`) {
+				t.Errorf("Text color %s not found in SVG", expectedTextColor)
+			}
+
+			// Also test simple style
+			svgSimple, err := generator.GenerateFlatSimple("123", colors.bgColor, colors.textColor)
+			if err != nil {
+				t.Errorf("Failed to generate simple badge with text color %s: %v", colors.textColor, err)
+			}
+
+			if len(svgSimple) == 0 {
+				t.Errorf("Generated empty SVG for simple badge with text color %s", colors.textColor)
+			}
+		})
+	}
+}
+
+// TestColorErrorMessages tests the improved error messages for invalid colors
+func TestColorErrorMessages(t *testing.T) {
+	// Path to a test font
+	wd, _ := os.Getwd()
+	fontPath := filepath.Join(wd, "testdata", "Verdana.ttf")
+
+	// Skip if font doesn't exist
+	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
+		t.Skip("Test font not found, skipping test")
+	}
+
+	generator, err := NewGenerator(fontPath, 11)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+
+	// Test with invalid background color
+	_, err = generator.GenerateFlat("test", "123", "xyz", "fff")
+	if err == nil {
+		t.Error("Expected error for invalid background color but got none")
+	} else {
+		// Check that the error message includes the invalid color
+		if !strings.Contains(err.Error(), "'xyz'") {
+			t.Errorf("Error message doesn't mention the invalid color: %v", err)
+		}
+	}
+
+	// Test with invalid text color
+	_, err = generator.GenerateFlat("test", "123", "007ec6", "xyz")
+	if err == nil {
+		t.Error("Expected error for invalid text color but got none")
+	} else {
+		// Check that the error message includes the invalid color
+		if !strings.Contains(err.Error(), "'xyz'") {
+			t.Errorf("Error message doesn't mention the invalid color: %v", err)
+		}
+	}
 }
