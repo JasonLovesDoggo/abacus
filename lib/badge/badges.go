@@ -211,6 +211,9 @@ func (g *Generator) Generate(params Params, style string) ([]byte, error) {
 	// Calculate text vertical positions for proper centering
 	textY := g.paddingV + leftDims.Ascent + ((height - g.paddingV*2 - leftDims.Height) / 2)
 
+	// Calculate shadow offset from textY
+	shadowOffset := textY - 1
+
 	// Use provided font family or fallback to generator's default
 	fontFamily := params.FontFamily
 	if fontFamily == "" {
@@ -219,20 +222,21 @@ func (g *Generator) Generate(params Params, style string) ([]byte, error) {
 
 	// Prepare template data
 	data := map[string]interface{}{
-		"LeftText":   params.LeftText,
-		"RightText":  params.RightText,
-		"Color":      formattedColor,
-		"TextColor":  formattedTextColor,
-		"LeftWidth":  leftWidth,
-		"RightWidth": rightWidth,
-		"TotalWidth": leftWidth + rightWidth,
-		"Height":     height,
-		"TextY":      textY,
-		"LeftTextX":  leftWidth / 2,
-		"RightTextX": leftWidth + (rightWidth / 2),
-		"FontSize":   g.fontSize,
-		"FontFamily": fontFamily,
-		"CenterX":    rightWidth / 2,
+		"LeftText":    params.LeftText,
+		"RightText":   params.RightText,
+		"Color":       formattedColor,
+		"TextColor":   formattedTextColor,
+		"LeftWidth":   leftWidth,
+		"RightWidth":  rightWidth,
+		"TotalWidth":  leftWidth + rightWidth,
+		"Height":      height,
+		"TextY":       textY,
+		"ShadowTextY": shadowOffset,
+		"LeftTextX":   leftWidth / 2,
+		"RightTextX":  leftWidth + (rightWidth / 2),
+		"FontSize":    g.fontSize,
+		"FontFamily":  fontFamily,
+		"CenterX":     rightWidth / 2,
 	}
 
 	// Select the appropriate template

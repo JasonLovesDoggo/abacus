@@ -19,10 +19,10 @@ const (
   </g>
   <g fill="{{.TextColor}}" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     {{if ne .LeftText ""}}
-      <text x="{{.LeftTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
+      <text x="{{.LeftTextX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
       <text x="{{.LeftTextX}}" y="{{.TextY}}">{{.LeftText}}</text>
     {{end}}
-    <text x="{{.RightTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
+    <text x="{{.RightTextX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.RightTextX}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>
 </svg>
@@ -61,10 +61,10 @@ const (
   </g>
   <g fill="{{.TextColor}}" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
     {{if ne .LeftText ""}}
-      <text x="{{.LeftTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
+      <text x="{{.LeftTextX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.LeftText}}</text>
       <text x="{{.LeftTextX}}" y="{{.TextY}}">{{.LeftText}}</text>
     {{end}}
-    <text x="{{.RightTextX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
+    <text x="{{.RightTextX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.RightTextX}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>
 </svg>
@@ -85,7 +85,7 @@ const (
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="url(#smooth)"/>
   </g>
   <g fill="{{.TextColor}}" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
-    <text x="{{.CenterX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
+    <text x="{{.CenterX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.CenterX}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>
 </svg>
@@ -118,7 +118,7 @@ const (
     <rect width="{{.RightWidth}}" height="{{.Height}}" fill="url(#gradient)"/>
   </g>
   <g fill="{{.TextColor}}" text-anchor="middle" font-family="{{.FontFamily}}" font-size="{{.FontSize}}">
-    <text x="{{.CenterX}}" y="{{.TextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
+    <text x="{{.CenterX}}" y="{{.ShadowTextY}}" fill="#010101" fill-opacity=".3">{{.RightText}}</text>
     <text x="{{.CenterX}}" y="{{.TextY}}">{{.RightText}}</text>
   </g>
 </svg>
