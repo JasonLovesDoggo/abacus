@@ -84,27 +84,34 @@ func TestBadgeGeneration(t *testing.T) {
 
 func TestColorValidation(t *testing.T) {
 	tests := []struct {
-		color   string
-		isValid bool
+		color    string
+		isValid  bool
+		expected string
 	}{
-		{"#007ec6", true},
-		{"#fff", true},
-		{"#123456", true},
-		{"#f00", true},
-		{"red", false},
-		{"blue", false},
-		{"", false},
-		{"#ff", false},
-		{"#fffffff", false},
+		{"007ec6", true, "#007ec6"},  // No # prefix, valid
+		{"#007ec6", true, "#007ec6"}, // With # prefix, valid
+		{"fff", true, "#fff"},        // Short form, no #, valid
+		{"#fff", true, "#fff"},       // Short form, with #, valid
+		{"#123456", true, "#123456"}, // Regular hex
+		{"#f00", true, "#f00"},       // Short form red
+		{"red", false, ""},           // Named color, invalid
+		{"blue", false, ""},          // Named color, invalid
+		{"", false, ""},              // Empty string
+		{"#ff", false, ""},           // Too short
+		{"#fffffff", false, ""},      // Too long
+		{"123zzz", false, ""},        // Invalid characters
 	}
 
 	for _, test := range tests {
-		err := ValidateColor(test.color)
+		formatted, err := ValidateColor(test.color)
 		if test.isValid && err != nil {
 			t.Errorf("ValidateColor(%s) returned error for valid color: %v", test.color, err)
 		}
 		if !test.isValid && err == nil {
 			t.Errorf("ValidateColor(%s) did not return error for invalid color", test.color)
+		}
+		if test.isValid && formatted != test.expected {
+			t.Errorf("ValidateColor(%s) produced %s, expected %s", test.color, formatted, test.expected)
 		}
 	}
 }

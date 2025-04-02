@@ -260,8 +260,9 @@ func (g *Generator) calculateTextDimensions(text string) textDimensions {
 
 // Generate creates a badge with the given parameters and style
 func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
-	// Validate color is a hex code
-	if err := ValidateColor(params.Color); err != nil {
+	// Validate and format the color
+	formattedColor, err := ValidateColor(params.Color)
+	if err != nil {
 		return nil, fmt.Errorf("invalid color: %w", err)
 	}
 
@@ -287,7 +288,7 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 	data := map[string]interface{}{
 		"LeftText":   params.LeftText,
 		"RightText":  params.RightText,
-		"Color":      params.Color,
+		"Color":      formattedColor,
 		"LeftWidth":  leftWidth,
 		"RightWidth": rightWidth,
 		"TotalWidth": leftWidth + rightWidth,
@@ -317,17 +318,16 @@ func (g *Generator) Generate(params BadgeParams, style string) ([]byte, error) {
 }
 
 // GenerateFlat generates a flat style badge
-func (g *Generator) GenerateFlat(leftText, rightText, color string) []byte {
+func (g *Generator) GenerateFlat(leftText, rightText, formattedColor string) []byte {
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   leftText,
 		RightText:  rightText,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "flat")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating flat badge:", err)
 		return []byte{}
 	}
@@ -336,17 +336,16 @@ func (g *Generator) GenerateFlat(leftText, rightText, color string) []byte {
 }
 
 // GenerateFlatSquare generates a flat-square style badge
-func (g *Generator) GenerateFlatSquare(leftText, rightText, color string) []byte {
+func (g *Generator) GenerateFlatSquare(leftText, rightText, formattedColor string) []byte {
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   leftText,
 		RightText:  rightText,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "flat-square")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating flat-square badge:", err)
 		return []byte{}
 	}
@@ -355,17 +354,16 @@ func (g *Generator) GenerateFlatSquare(leftText, rightText, color string) []byte
 }
 
 // GeneratePlastic generates a plastic style badge
-func (g *Generator) GeneratePlastic(leftText, rightText, color string) []byte {
+func (g *Generator) GeneratePlastic(leftText, rightText, formattedColor string) []byte {
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   leftText,
 		RightText:  rightText,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "plastic")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating plastic badge:", err)
 		return []byte{}
 	}
@@ -376,17 +374,17 @@ func (g *Generator) GeneratePlastic(leftText, rightText, color string) []byte {
 // Simple badge variants for single-text badges
 
 // GenerateFlatSimple generates a simple flat badge with single text
-func (g *Generator) GenerateFlatSimple(text, color string) []byte {
+func (g *Generator) GenerateFlatSimple(text, formattedColor string) []byte {
+
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   "",
 		RightText:  text,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "flat-simple")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating flat-simple badge:", err)
 		return []byte{}
 	}
@@ -395,17 +393,17 @@ func (g *Generator) GenerateFlatSimple(text, color string) []byte {
 }
 
 // GenerateFlatSquareSimple generates a simple flat-square badge with single text
-func (g *Generator) GenerateFlatSquareSimple(text, color string) []byte {
+func (g *Generator) GenerateFlatSquareSimple(text, formattedColor string) []byte {
+
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   "",
 		RightText:  text,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "flat-square-simple")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating flat-square-simple badge:", err)
 		return []byte{}
 	}
@@ -414,17 +412,17 @@ func (g *Generator) GenerateFlatSquareSimple(text, color string) []byte {
 }
 
 // GeneratePlasticSimple generates a simple plastic badge with single text
-func (g *Generator) GeneratePlasticSimple(text, color string) []byte {
+func (g *Generator) GeneratePlasticSimple(text, formattedColor string) []byte {
+
 	badge, err := g.Generate(BadgeParams{
 		LeftText:   "",
 		RightText:  text,
-		Color:      color,
+		Color:      formattedColor,
 		FontSize:   g.fontSize,
 		FontFamily: g.fontFamily,
 	}, "plastic-simple")
 
 	if err != nil {
-		// Log the error and return empty SVG
 		fmt.Println("Error generating plastic-simple badge:", err)
 		return []byte{}
 	}

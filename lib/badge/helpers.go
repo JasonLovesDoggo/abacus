@@ -2,26 +2,31 @@ package badge
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 )
 
-// ValidateColor checks if the color is valid
-func ValidateColor(color string) error {
+// ValidateColor checks if the color is valid and returns a properly formatted hex color
+func ValidateColor(color string) (string, error) {
 	if len(color) == 0 {
-		return errors.New("color cannot be empty")
+		return "", errors.New("color cannot be empty")
 	}
 
-	// Ensure color is a hex code
-	if color[0] != '#' {
-		return errors.New("color must be a hex code starting with #")
+	// Trim any whitespace
+	color = strings.TrimSpace(color)
+
+	// Add # prefix if missing
+	if !strings.HasPrefix(color, "#") {
+		color = "#" + color
 	}
 
-	// Ensure hex code has valid length (either #RGB or #RRGGBB)
-	if len(color) != 4 && len(color) != 7 {
-		return errors.New("invalid hex code format: must be #RGB or #RRGGBB")
+	// Check if it's a valid hex code format (either #RGB or #RRGGBB)
+	hexRegex := regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
+	if !hexRegex.MatchString(color) {
+		return "", errors.New("invalid hex color format: must be a valid hex color like 'fff' or 'ff5500'")
 	}
 
-	return nil
+	return color, nil
 }
 
 // BadgeStyle represents different badge styles
@@ -33,7 +38,7 @@ const (
 	StyleFlatSquare       BadgeStyle = "flat-square"
 	StylePlastic          BadgeStyle = "plastic"
 	StyleFlatSimple       BadgeStyle = "flat-simple"
-	StyleFlatSquareSimple BadgeStyle = "flat-square-simple" // Fixed name to match template key
+	StyleFlatSquareSimple BadgeStyle = "flat-square-simple"
 	StylePlasticSimple    BadgeStyle = "plastic-simple"
 )
 
