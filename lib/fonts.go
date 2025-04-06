@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // FontInfo contains details about a font
@@ -61,10 +62,13 @@ func GetFontFilePath(font string) (string, string, error) {
 		fontInfo = FontMap["verdana"]
 	}
 
-	fontPath := filepath.Join(filepath.Dir(execDir), "assets", "fonts", fontInfo.FileName)
+	fontPath := filepath.Join(execDir, "assets", "fonts", fontInfo.FileName)
 
 	// Check if font file exists
 	if _, err := os.Stat(fontPath); os.IsNotExist(err) {
+		if strings.ToLower(os.Getenv("DEBUG")) == "true" {
+			return "", "", fmt.Errorf("font file not found: %s", fontPath)
+		}
 		return "", "", fmt.Errorf("font file not found: %s", fontPath)
 	}
 
