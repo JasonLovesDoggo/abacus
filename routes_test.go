@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -162,6 +165,44 @@ func TestHitView(t *testing.T) {
 	})
 }
 
+func TestHitShield(t *testing.T) {
+	r := setupTestRouter()
+
+	// First create a shield key
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/create/test/shield_key", nil)
+	r.ServeHTTP(w, req)
+
+	t.Run("Increment shield key", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/hit/test/shield_key/shield", nil)
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseBytes := w.Body.Bytes()
+
+		assert.NotEmpty(t, responseBytes, "Response body should not be empty")
+
+		responseStr := string(responseBytes)
+
+		// Validate that it's valid XML
+		var svgDoc interface{}
+		err := xml.Unmarshal(responseBytes, &svgDoc)
+		assert.NoError(t, err, "Response should be valid XML")
+
+		re := regexp.MustCompile(`<text.*?>(\d+)</text>`)
+		matches := re.FindAllStringSubmatch(responseStr, -1)
+
+		assert.NotEmpty(t, matches, "SVG should contain at least one <text> element with a number")
+
+		counterText := matches[len(matches)-1][1] // Get the last captured number
+		counterValue, err := strconv.ParseFloat(counterText, 64)
+		assert.NoError(t, err, "Counter value should be a valid float")
+
+		assert.Equal(t, float64(1), counterValue, "Counter value should match expected")
+	})
+}
+
 func TestGetView(t *testing.T) {
 	r := setupTestRouter()
 
@@ -190,6 +231,52 @@ func TestGetView(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, float64(100), response["value"])
+	})
+}
+
+func TestGetShield(t *testing.T) {
+	r := setupTestRouter()
+
+	t.Run("Get non-existent shield key", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/get/test/nonexistent_shield_key/shield", nil)
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("Get existing shield key", func(t *testing.T) {
+		// Create a shield key first
+		createW := httptest.NewRecorder()
+		createReq, _ := http.NewRequest("POST", "/create/test/get_shield_key?initializer=50", nil)
+		r.ServeHTTP(createW, createReq)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/get/test/get_shield_key/shield", nil)
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseBytes := w.Body.Bytes()
+
+		assert.NotEmpty(t, responseBytes, "Response body should not be empty")
+
+		responseStr := string(responseBytes)
+
+		// Validate that it's valid XML
+		var svgDoc interface{}
+		err := xml.Unmarshal(responseBytes, &svgDoc)
+		assert.NoError(t, err, "Response should be valid XML")
+
+		re := regexp.MustCompile(`<text.*?>(\d+)</text>`)
+		matches := re.FindAllStringSubmatch(responseStr, -1)
+
+		assert.NotEmpty(t, matches, "SVG should contain at least one <text> element with a number")
+
+		counterText := matches[len(matches)-1][1] // Get the last captured number
+		counterValue, err := strconv.ParseFloat(counterText, 64)
+		assert.NoError(t, err, "Counter value should be a valid float")
+
+		assert.Equal(t, float64(50), counterValue, "Counter value should match expected")
 	})
 }
 
