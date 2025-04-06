@@ -1,13 +1,15 @@
 package middleware
 
 import (
-	"log"
 	"strings"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jasonlovesdoggo/abacus/utils"
+	"go.uber.org/zap"
 )
+
+var logger, _ = zap.NewProduction()
 
 func formatPath(path string) string {
 	if len(path) == 0 {
@@ -23,7 +25,7 @@ func formatPath(path string) string {
 func Stats() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if utils.StatsManager == nil {
-			log.Fatal("StatsManager not initialized. Call InitializeStatsManager first")
+			logger.Fatal("StatsManager not initialized. Call InitializeStatsManager first")
 		}
 
 		path := formatPath(c.Request.URL.Path)
