@@ -45,6 +45,14 @@ var (
 
 const is32Bit = uint64(^uintptr(0)) != ^uint64(0)
 
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
+}
+
 func init() {
 	utils.LoadEnv()
 
@@ -211,10 +219,10 @@ func main() {
 
 	r := CreateRouter()
 	srv := &http.Server{
-		Addr:    ":" + os.Getenv("PORT"),
+		Addr:    ":" + getEnv("PORT", "8080"),
 		Handler: r,
 	}
-	fmt.Println("Listening on port " + os.Getenv("PORT"))
+	fmt.Println("Listening on port " + getEnv("PORT", "8080"))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
