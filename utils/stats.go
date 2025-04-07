@@ -187,7 +187,7 @@ func (sm *StatManager) logStats() {
 		return true
 	})
 
-	stats, _ := json.MarshalIndent(snapshot, "", "  ")
+	stats, _ := json.Marshal(snapshot)
 	log.Printf("Stats Health Check:\n%s", string(stats))
 
 	// Check if we should save stats based on totals

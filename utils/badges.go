@@ -2,16 +2,44 @@ package utils
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/jasonlovesdoggo/abacus/lib"
 	"log"
 	"strconv"
 	"strings"
-
-	"github.com/jasonlovesdoggo/abacus/lib"
+	"sync"
 
 	"github.com/jasonlovesdoggo/abacus/lib/badge"
-
-	"github.com/gin-gonic/gin"
 )
+
+type generatorCacheKey struct {
+	fontPath string
+	fontSize float64
+}
+
+var generatorCache sync.Map
+
+// getOrCreateGenerator retrieves a generator from cache or creates and caches it
+func getOrCreateGenerator(fontPath string, fontSize float64) (*badge.Generator, error) {
+	key := generatorCacheKey{fontPath: fontPath, fontSize: fontSize}
+
+	// Try to load from cache
+	if gen, ok := generatorCache.Load(key); ok {
+		return gen.(*badge.Generator), nil
+	}
+
+	// Not in cache, create a new one
+	log.Printf("Cache miss: Creating new badge generator for font: %s, size: %f", fontPath, fontSize)
+	generator, err := badge.NewGenerator(fontPath, fontSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize badge generator: %w", err)
+	}
+
+	// Store in cache (LoadOrStore handles race conditions)
+	actualGen, _ := generatorCache.LoadOrStore(key, generator)
+
+	return actualGen.(*badge.Generator), nil
+}
 
 func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	bgColor := c.DefaultQuery("bgcolor", "007ec6")
@@ -24,18 +52,18 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	// Validate and parse background color
 	bgColor, err := badge.ValidateColor(bgColor)
 	if err != nil {
-		return nil, err
+		return nil, err // Return validation error directly
 	}
 
 	// Validate and parse text color
 	textColor, err = badge.ValidateColor(textColor)
 	if err != nil {
-		return nil, err
+		return nil, err // Return validation error directly
 	}
 
 	// Parse font size
 	fontSize, err := strconv.ParseFloat(fontSizeStr, 64)
-	if err != nil || fontSize <= 3 { // font sizes too small can result in rendering issues
+	if err != nil || fontSize <= 3 {
 		fontSize = 11 // Fallback to default if invalid
 	}
 
@@ -43,29 +71,38 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	filePath, fontFamily, err := lib.GetFontFilePath(font)
 	if err != nil {
 		log.Printf("Error: Failed to get font file path: %v", err)
-		return nil, fmt.Errorf("font error: %w", err)
+		// Return a more specific error if font path fails
+		return nil, fmt.Errorf("font error: failed to find font '%s': %w", font, err)
 	}
 
-	// Create badge generator with the specified font and size
-	generator, err := badge.NewGenerator(filePath, fontSize)
+	// Use the cached generator
+	generator, err := getOrCreateGenerator(filePath, fontSize)
 	if err != nil {
-		log.Printf("Error: Failed to initialize badge generator: %v", err)
-		return nil, fmt.Errorf("initialization error: %w", err)
+		log.Printf("Error: Failed to get/create badge generator: %v", err)
+		// Ensure errors from generator creation/retrieval are returned
+		return nil, fmt.Errorf("badge generator error: %w", err)
 	}
-
-	// Set the font family explicitly
-	generator.SetFontFamily(fontFamily)
 
 	// Adjust padding based on font size to maintain proportions
 	paddingH := fontSize * 0.75
 	paddingV := fontSize * 0.45
-	generator.SetPadding(paddingH, paddingV)
+	generator.SetPadding(paddingH, paddingV) // Apply padding settings
 
 	// Convert count to string for badge
 	countString := strconv.FormatInt(count, 10)
 
-	// Check if it's a simple badge style (without left text)
+	// Create Params struct
+	badgeParams := badge.Params{
+		LeftText:   text, // Use 'text' parsed from query
+		RightText:  countString,
+		Color:      bgColor,
+		TextColor:  textColor,
+		FontSize:   fontSize,   // Pass the specific fontSize
+		FontFamily: fontFamily, // Pass the specific fontFamily
+	}
+
 	if badge.IsSimpleStyle(style) {
+		badgeParams.LeftText = "" // Empty LeftText for simple styles
 		switch style {
 		case "plastic-simple":
 			return generator.GeneratePlasticSimple(countString, bgColor, textColor)
@@ -74,12 +111,13 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 		case "flat-simple":
 			return generator.GenerateFlatSimple(countString, bgColor, textColor)
 		default:
-			// Default to flat-simple if the style is unknown but contains "-simple"
+			// Fallback for unknown simple styles
+			log.Printf("Unknown simple badge style '%s', defaulting to flat-simple", style)
 			return generator.GenerateFlatSimple(countString, bgColor, textColor)
 		}
 	}
 
-	// Regular badge styles with both left and right text
+	// Regular badge styles
 	switch style {
 	case "plastic":
 		return generator.GeneratePlastic(text, countString, bgColor, textColor)
@@ -88,7 +126,8 @@ func GenerateBadge(c *gin.Context, count int64) ([]byte, error) {
 	case "flat":
 		return generator.GenerateFlat(text, countString, bgColor, textColor)
 	default:
-		// Default to flat style for unknown styles
+		// Fallback for unknown regular styles
+		log.Printf("Unknown badge style '%s', defaulting to flat", style)
 		return generator.GenerateFlat(text, countString, bgColor, textColor)
 	}
 }

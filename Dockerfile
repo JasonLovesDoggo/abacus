@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.4 as builder
+FROM golang:1.24 as builder
 WORKDIR /src
 COPY . .
 RUN go mod download
@@ -18,5 +18,5 @@ CMD ["/abacus"]
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 CMD wget -S -O - http://0.0.0.0:8080/healthcheck || exit 1
 
 LABEL maintainer="Jason Cameron abacus@jasoncameron.dev"
-LABEL version="1.5.0"
+LABEL version="1.5.3"
 LABEL description="This is a simple countAPI service written in Go."
