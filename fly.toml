@@ -23,3 +23,6 @@ path = "/healthcheck"
 memory_mb = 256
 cpu_kind = 'shared'
 cpus = 1
+
+[deploy]
+strategy = "bluegreen"
