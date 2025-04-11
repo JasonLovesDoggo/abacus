@@ -133,6 +133,131 @@ func StreamValueView(c *gin.Context) {
 	})
 }
 
+func StreamHitView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		return
+	}
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" { // error is handled in CreateKey
+		return
+	}
+	// Get data from Redis
+	val, err := Client.Incr(context.Background(), dbKey).Result()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
+	// check if val is is greater than the max value of an int
+	if val > math.MaxInt {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Value is too large. Max value is " + strconv.Itoa(math.
+			MaxInt), "message": "If you are seeing this error and have a legitimate use case, please contact me @ abacus@jasoncameron.dev"})
+		return
+	}
+
+	go func() {
+		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
+		// see above) to ensure val is within the range of an int.
+		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+	}()
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+
+	// Initialize client channel with a buffer to prevent blocking
+	clientChan := make(chan int, 10)
+
+	// Create a context that's canceled when the client disconnects
+	ctx := c.Request.Context()
+
+	// Add this client to the event server for this specific key
+	utils.ValueEventServer.NewClients <- utils.KeyClientPair{
+		Key:    dbKey,
+		Client: clientChan,
+	}
+
+	// Track if cleanup has been done
+	var cleanupDone bool
+	var cleanupMutex sync.Mutex
+
+	// Ensure client is always removed when handler exits
+	defer func() {
+		cleanupMutex.Lock()
+		if !cleanupDone {
+			cleanupDone = true
+			cleanupMutex.Unlock()
+
+			// Signal the event server to remove this client
+			select {
+			case utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{Key: dbKey, Client: clientChan}:
+				// Successfully sent cleanup signal
+			case <-time.After(500 * time.Millisecond):
+				// Timed out waiting to send cleanup signal
+				log.Printf("Warning: Timed out sending cleanup signal for %s", dbKey)
+			}
+		} else {
+			cleanupMutex.Unlock()
+		}
+	}()
+
+	// Monitor for client disconnection in a separate goroutine
+	go func() {
+		<-ctx.Done() // Wait for context cancellation (client disconnected)
+
+		cleanupMutex.Lock()
+		if !cleanupDone {
+			cleanupDone = true
+			cleanupMutex.Unlock()
+
+			log.Printf("Client disconnected for key %s, cleaning up", dbKey)
+
+			// Signal the event server to remove this client
+			select {
+			case utils.ValueEventServer.ClosedClients <- utils.KeyClientPair{Key: dbKey, Client: clientChan}:
+				// Successfully sent cleanup signal
+			case <-time.After(500 * time.Millisecond):
+				// Timed out waiting to send cleanup signal
+				log.Printf("Warning: Timed out sending cleanup signal for %s after disconnect", dbKey)
+			}
+		} else {
+			cleanupMutex.Unlock()
+		}
+	}()
+
+	// Send initial value
+	if count := val; err == nil {
+		// Keep your exact format
+		_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+		if err != nil {
+			log.Printf("Error writing to client: %v", err)
+			return
+		}
+		c.Writer.Flush()
+	}
+
+	// Stream updates
+	c.Stream(func(w io.Writer) bool {
+		select {
+		case <-ctx.Done():
+			return false
+		case count, ok := <-clientChan:
+			if !ok {
+				return false
+			}
+			// Keep your exact format
+			_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
+			if err != nil {
+				log.Printf("Error writing to client: %v", err)
+				return false
+			}
+			c.Writer.Flush()
+			return true
+		}
+	})
+}
+
 func HitView(c *gin.Context) {
 	namespace, key := utils.GetNamespaceKey(c)
 	if namespace == "" || key == "" {
