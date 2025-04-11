@@ -610,6 +610,20 @@
 ⇒ data: {"value": 36}
 </pre>
 
+    <h3 class="endpoint">/stream/hit/:namespace/*key</h3>
+    <p>
+        Increments and streams a counter using 
+        <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Receiving_events_from_the_server" target="_blank">
+            Server-Sent Events (SSE)
+        </a>.
+        <br>
+        Optionally specify a namespace.</p>
+
+    <pre class="success">
+<a href="https://abacus.jasoncameron.dev/stream/hit/mysite.com/visits" target="_blank">GET /stream/hit/mysite.com/visits</a>
+⇒ data: {"value": 1}
+</pre>
+
     <h3 id="create" class="endpoint">/create/:namespace/*key</h3>
     <p>Create a new counter with an optional initial value (default 0). Specify both namespace and key. </p>
     <pre class="info">Note about <b>admin_key</b>: this is the only time you will be able to see it, if you lose the key then you lose access to control the counter. </pre>
