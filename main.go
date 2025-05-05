@@ -32,7 +32,7 @@ import (
 
 const (
 	DocsUrl string = "https://jasoncameron.dev/abacus/"
-	Version string = "1.5.3"
+	Version string = "1.5.4"
 )
 
 var (
