@@ -202,6 +202,8 @@ func HitShieldView(c *gin.Context) {
 		return
 	}
 	c.Header("Content-Type", "image/svg+xml")
+	// github camo likes caching this
+	c.Header("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate")
 	c.Data(http.StatusOK, "image/svg+xml", badgeSVG)
 }
 
