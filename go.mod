@@ -1,4 +1,4 @@
-module github.com/jasonlovesdoggo/abacus
+module pkg.jsn.cam/abacus
 
 go 1.24.2
 

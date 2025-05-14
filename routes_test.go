@@ -18,7 +18,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"pkg.jsn.cam/abacus/utils"
 
 	"github.com/goccy/go-json"
 

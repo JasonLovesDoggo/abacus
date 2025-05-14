@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"pkg.jsn.cam/abacus/utils"
 )
 
 func formatPath(path string) string {

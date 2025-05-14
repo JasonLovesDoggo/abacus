@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jasonlovesdoggo/abacus/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"pkg.jsn.cam/abacus/utils"
 )
 
 // MockCloseNotifier implements http.CloseNotifier for testing

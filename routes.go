@@ -17,7 +17,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"pkg.jsn.cam/abacus/utils"
 
 	"github.com/gin-gonic/gin"
 )

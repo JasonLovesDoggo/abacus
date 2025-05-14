@@ -20,12 +20,12 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/jasonlovesdoggo/abacus/middleware"
+	"pkg.jsn.cam/abacus/middleware"
 
 	"github.com/gin-contrib/cors"
 	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"pkg.jsn.cam/abacus/utils"
 
 	"github.com/gin-gonic/gin"
 )

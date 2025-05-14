@@ -9,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jasonlovesdoggo/abacus/utils"
+	"pkg.jsn.cam/abacus/utils"
 )
 
 func Auth(Client *redis.Client) gin.HandlerFunc {

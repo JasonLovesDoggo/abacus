@@ -2,14 +2,15 @@ package utils
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jasonlovesdoggo/abacus/lib"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/jasonlovesdoggo/abacus/lib/badge"
+	"github.com/gin-gonic/gin"
+	"pkg.jsn.cam/abacus/lib"
+
+	"pkg.jsn.cam/abacus/lib/badge"
 )
 
 type generatorCacheKey struct {

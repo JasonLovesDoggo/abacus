@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jasonlovesdoggo/abacus/lib"
+	"pkg.jsn.cam/abacus/lib"
 )
 
 func TestBadgeGeneration(t *testing.T) {
