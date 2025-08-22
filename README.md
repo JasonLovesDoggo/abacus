@@ -2,7 +2,7 @@
                                                                
 > Note: Abacus was designed as a direct replacement/upgrade for [CountAPI](https://countapi.xyz/) as it got taken down
 
-In order to get started, please visit the docs at https://abacus.jasoncameron.dev
+In order to get started, please visit the docs at https://abacus.jsn.cam
 
 <!--
 ## Key features
@@ -30,7 +30,7 @@ In order to get started, please visit the docs at https://abacus.jasoncameron.de
 
 ## Todos
 
-- [x] Documentation (https://abacus.jasoncameron.dev)
+- [x] Documentation (https://abacus.jsn.cam)
 - [x] ~~K8 Deployment~~ (Render + Redis on OCI)
 - [x] JSONP Support (https://gin-gonic.com/docs/examples/jsonp/)
 - [x] impl /create endpoint which creates a new counter initialized to 0 and returns a secret key that can be used to modify the counter via the following endpoints
