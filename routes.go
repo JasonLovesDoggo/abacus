@@ -41,7 +41,7 @@ func StreamValueView(c *gin.Context) {
 	c.Header("Connection", "keep-alive")
 
 	// Initialize client channel with a buffer to prevent blocking
-	clientChan := make(chan int, 10)
+	clientChan := make(chan int, 100)
 
 	// Create a context that's canceled when the client disconnects
 	ctx := c.Request.Context()

@@ -27,9 +27,9 @@ type KeyClientPair struct {
 func NewValueEventServer() *ValueEvent {
 	event := &ValueEvent{
 		// Use buffered channels to prevent blocking
-		Message:       make(chan KeyValue, 100),
-		NewClients:    make(chan KeyClientPair, 100),
-		ClosedClients: make(chan KeyClientPair, 100),
+		Message:       make(chan KeyValue, 20000),
+		NewClients:    make(chan KeyClientPair, 5000),
+		ClosedClients: make(chan KeyClientPair, 5000),
 		TotalClients:  make(map[string]map[chan int]bool),
 	}
 	go event.listen()
@@ -85,14 +85,14 @@ func (v *ValueEvent) listen() {
 			v.Mu.RUnlock()
 
 			// Send messages without holding the lock
-			// Track which clients failed to receive
+			// Use non-blocking sends for better performance
 			var failedClients []chan int
 			for _, clientChan := range clientChannels {
 				select {
 				case clientChan <- keyValue.Value:
 					// Message sent successfully
-				case <-time.After(100 * time.Millisecond):
-					// Client not responding, mark for removal
+				default:
+					// Channel full, client is slow - mark for removal
 					failedClients = append(failedClients, clientChan)
 				}
 			}
