@@ -93,6 +93,20 @@ func init() {
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       DbNum + 1,
 	})
+
+	// Test Redis connection
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := Client.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis at %s: %v", ADDR, err)
+	}
+
+	if err := RateLimitClient.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis rate limit DB at %s: %v", ADDR, err)
+	}
+
+	log.Printf("Successfully connected to Redis at %s", ADDR)
 }
 
 func setupMockRedis() {

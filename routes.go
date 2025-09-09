@@ -112,7 +112,7 @@ func StreamValueView(c *gin.Context) {
 		c.Writer.Flush()
 	}
 
-	// Stream updates
+	// Stream updates with heartbeat to keep connection alive
 	c.Stream(func(w io.Writer) bool {
 		select {
 		case <-ctx.Done():
@@ -125,6 +125,15 @@ func StreamValueView(c *gin.Context) {
 			_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
 			if err != nil {
 				log.Printf("Error writing to client: %v", err)
+				return false
+			}
+			c.Writer.Flush()
+			return true
+		case <-time.After(30 * time.Second):
+			// Send heartbeat comment to keep connection alive
+			_, err := c.Writer.WriteString(": heartbeat\n\n")
+			if err != nil {
+				log.Printf("Error writing heartbeat: %v", err)
 				return false
 			}
 			c.Writer.Flush()
@@ -505,5 +514,6 @@ func StatsView(c *gin.Context) {
 		},
 		"total_keys": totalKeys,
 		"shard":      Shard,
+		"sse":        utils.ValueEventServer.GetStats(),
 	})
 }

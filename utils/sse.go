@@ -1,8 +1,13 @@
 package utils
 
 import (
+	"hash/fnv"
 	"log"
+	"os"
+	"runtime"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -12,6 +17,19 @@ type ValueEvent struct {
 	ClosedClients chan KeyClientPair
 	TotalClients  map[string]map[chan int]bool
 	Mu            sync.RWMutex
+
+	// Internal optimized implementation
+	shards          []*shard
+	shardCount      int
+	workers         int
+	workerPool      chan workerTask
+	maxConnections  int32
+	activeConns     int32
+	droppedMessages int64
+	totalMessages   int64
+	clientTimeout   time.Duration
+	shutdown        chan struct{}
+	wg              sync.WaitGroup
 }
 
 type KeyValue struct {
@@ -24,121 +42,299 @@ type KeyClientPair struct {
 	Client chan int
 }
 
+type shard struct {
+	mu      sync.RWMutex
+	clients map[string]map[chan int]bool
+}
+
+type workerTask struct {
+	taskType string
+	key      string
+	value    int
+	client   chan int
+}
+
 func NewValueEventServer() *ValueEvent {
+	// Get configuration from environment with sensible defaults
+	workers := getEnvInt("SSE_WORKER_COUNT", runtime.NumCPU())
+	bufferSize := getEnvInt("SSE_BUFFER_SIZE", 1000)
+	maxConns := getEnvInt("MAX_SSE_CONNECTIONS", 100000)
+	clientTimeout := time.Duration(getEnvInt("SSE_CLIENT_TIMEOUT_MS", 1000)) * time.Millisecond
+	shardCount := getEnvInt("SSE_SHARD_COUNT", 32)
+
 	event := &ValueEvent{
-		// Use buffered channels to prevent blocking
-		Message:       make(chan KeyValue, 100),
-		NewClients:    make(chan KeyClientPair, 100),
-		ClosedClients: make(chan KeyClientPair, 100),
+		// Public channels for compatibility
+		Message:       make(chan KeyValue, bufferSize),
+		NewClients:    make(chan KeyClientPair, bufferSize),
+		ClosedClients: make(chan KeyClientPair, bufferSize),
 		TotalClients:  make(map[string]map[chan int]bool),
+
+		// Optimized implementation
+		shardCount:     shardCount,
+		workers:        workers,
+		workerPool:     make(chan workerTask, bufferSize*2),
+		maxConnections: int32(maxConns),
+		clientTimeout:  clientTimeout,
+		shutdown:       make(chan struct{}),
 	}
-	go event.listen()
+
+	// Initialize shards
+	event.shards = make([]*shard, shardCount)
+	for i := 0; i < shardCount; i++ {
+		event.shards[i] = &shard{
+			clients: make(map[string]map[chan int]bool),
+		}
+	}
+
+	// Start worker pool
+	for i := 0; i < workers; i++ {
+		event.wg.Add(1)
+		go event.worker(i)
+	}
+
+	// Start dispatcher
+	event.wg.Add(1)
+	go event.dispatcher()
+
+	// Start compatibility sync
+	go event.syncTotalClients()
+
+	log.Printf("SSE server started with %d workers, %d shards, max %d connections",
+		workers, shardCount, maxConns)
+
 	return event
 }
 
-func (v *ValueEvent) listen() {
+func (v *ValueEvent) getShard(key string) *shard {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	return v.shards[h.Sum32()%uint32(v.shardCount)]
+}
+
+func (v *ValueEvent) dispatcher() {
+	defer v.wg.Done()
+
 	for {
 		select {
+		case <-v.shutdown:
+			close(v.workerPool)
+			return
+
 		case newClient := <-v.NewClients:
-			v.Mu.Lock()
-			if _, exists := v.TotalClients[newClient.Key]; !exists {
-				v.TotalClients[newClient.Key] = make(map[chan int]bool)
-			}
-			v.TotalClients[newClient.Key][newClient.Client] = true
-			v.Mu.Unlock()
-			log.Printf("Client added for key %s. Total clients: %d", newClient.Key, len(v.TotalClients[newClient.Key]))
-
-		case closedClient := <-v.ClosedClients:
-			v.Mu.Lock()
-			if clients, exists := v.TotalClients[closedClient.Key]; exists {
-				if _, ok := clients[closedClient.Client]; ok {
-					delete(clients, closedClient.Client)
-
-					// Close channel safely
-					close(closedClient.Client)
-
-					log.Printf("Removed client for key %s", closedClient.Key)
-
-					// Clean up key map if no more clients
-					if len(clients) == 0 {
-						delete(v.TotalClients, closedClient.Key)
-						log.Printf("No more clients for key %s, removed key entry", closedClient.Key)
-					}
-				}
-			}
-			v.Mu.Unlock()
-
-		case keyValue := <-v.Message:
-			// First, get a snapshot of clients under read lock
-			v.Mu.RLock()
-			clients, exists := v.TotalClients[keyValue.Key]
-			if !exists || len(clients) == 0 {
-				v.Mu.RUnlock()
+			// Check connection limit
+			currentConns := atomic.LoadInt32(&v.activeConns)
+			if currentConns >= v.maxConnections {
+				log.Printf("Connection limit reached (%d/%d), rejecting new client for key %s",
+					currentConns, v.maxConnections, newClient.Key)
+				close(newClient.Client)
 				continue
 			}
 
-			// Create a safe copy of client channels
-			clientChannels := make([]chan int, 0, len(clients))
-			for clientChan := range clients {
-				clientChannels = append(clientChannels, clientChan)
-			}
-			v.Mu.RUnlock()
-
-			// Send messages without holding the lock
-			// Track which clients failed to receive
-			var failedClients []chan int
-			for _, clientChan := range clientChannels {
-				select {
-				case clientChan <- keyValue.Value:
-					// Message sent successfully
-				case <-time.After(100 * time.Millisecond):
-					// Client not responding, mark for removal
-					failedClients = append(failedClients, clientChan)
-				}
+			atomic.AddInt32(&v.activeConns, 1)
+			v.workerPool <- workerTask{
+				taskType: "add",
+				key:      newClient.Key,
+				client:   newClient.Client,
 			}
 
-			// Schedule removal of failed clients
-			for _, failedClient := range failedClients {
-				select {
-				case v.ClosedClients <- KeyClientPair{Key: keyValue.Key, Client: failedClient}:
-					// Client scheduled for removal
-				default:
-					// If ClosedClients channel is full, try again later
-					go func(key string, client chan int) {
-						time.Sleep(200 * time.Millisecond)
-						select {
-						case v.ClosedClients <- KeyClientPair{Key: key, Client: client}:
-							// Success on retry
-						default:
-							log.Printf("Failed to remove client for key %s even after retry", key)
-						}
-					}(keyValue.Key, failedClient)
-				}
+		case closedClient := <-v.ClosedClients:
+			v.workerPool <- workerTask{
+				taskType: "remove",
+				key:      closedClient.Key,
+				client:   closedClient.Client,
+			}
+
+		case keyValue := <-v.Message:
+			atomic.AddInt64(&v.totalMessages, 1)
+			v.broadcastMessage(keyValue)
+		}
+	}
+}
+
+func (v *ValueEvent) worker(id int) {
+	defer v.wg.Done()
+
+	for task := range v.workerPool {
+		switch task.taskType {
+		case "add":
+			v.addClient(task.key, task.client)
+		case "remove":
+			v.removeClient(task.key, task.client)
+		case "send":
+			v.sendToClient(task.client, task.value)
+		}
+	}
+}
+
+func (v *ValueEvent) addClient(key string, client chan int) {
+	shard := v.getShard(key)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+
+	if _, exists := shard.clients[key]; !exists {
+		shard.clients[key] = make(map[chan int]bool)
+	}
+	shard.clients[key][client] = true
+	log.Printf("Client added for key %s. Total clients: %d", key, len(shard.clients[key]))
+}
+
+func (v *ValueEvent) removeClient(key string, client chan int) {
+	shard := v.getShard(key)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
+
+	if clients, exists := shard.clients[key]; exists {
+		if _, ok := clients[client]; ok {
+			delete(clients, client)
+			atomic.AddInt32(&v.activeConns, -1)
+
+			// Don't close the channel here - let the route handler manage it
+			// The channel will be closed when the HTTP handler exits
+
+			log.Printf("Removed client for key %s", key)
+
+			if len(clients) == 0 {
+				delete(shard.clients, key)
+				log.Printf("No more clients for key %s, removed key entry", key)
 			}
 		}
 	}
 }
 
-func (v *ValueEvent) CountClientsForKey(key string) int {
-	v.Mu.RLock()
-	defer v.Mu.RUnlock()
+func (v *ValueEvent) broadcastMessage(kv KeyValue) {
+	shard := v.getShard(kv.Key)
 
-	if clients, exists := v.TotalClients[key]; exists {
+	// Get clients snapshot
+	shard.mu.RLock()
+	clients, exists := shard.clients[kv.Key]
+	if !exists || len(clients) == 0 {
+		shard.mu.RUnlock()
+		return
+	}
+
+	clientList := make([]chan int, 0, len(clients))
+	for client := range clients {
+		clientList = append(clientList, client)
+	}
+	shard.mu.RUnlock()
+
+	// Parallel broadcast with batching
+	var wg sync.WaitGroup
+	batchSize := len(clientList) / v.workers
+	if batchSize < 1 {
+		batchSize = 1
+	}
+
+	for i := 0; i < len(clientList); i += batchSize {
+		end := i + batchSize
+		if end > len(clientList) {
+			end = len(clientList)
+		}
+
+		wg.Add(1)
+		go func(clients []chan int) {
+			defer wg.Done()
+			for _, client := range clients {
+				v.sendToClient(client, kv.Value)
+			}
+		}(clientList[i:end])
+	}
+
+	// Wait with timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All messages sent
+	case <-time.After(100 * time.Millisecond):
+		log.Printf("Broadcast timeout for key %s (sending to %d clients)", kv.Key, len(clientList))
+	}
+}
+
+func (v *ValueEvent) sendToClient(client chan int, value int) {
+	select {
+	case client <- value:
+		// Successfully sent
+	case <-time.After(v.clientTimeout):
+		atomic.AddInt64(&v.droppedMessages, 1)
+	default:
+		// Channel full, drop message
+		atomic.AddInt64(&v.droppedMessages, 1)
+	}
+}
+
+// Maintain compatibility with old code that reads TotalClients
+func (v *ValueEvent) syncTotalClients() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-v.shutdown:
+			return
+		case <-ticker.C:
+			v.updateTotalClients()
+		}
+	}
+}
+
+func (v *ValueEvent) updateTotalClients() {
+	allClients := make(map[string]map[chan int]bool)
+
+	for _, s := range v.shards {
+		s.mu.RLock()
+		for key, clients := range s.clients {
+			if _, exists := allClients[key]; !exists {
+				allClients[key] = make(map[chan int]bool)
+			}
+			for client := range clients {
+				allClients[key][client] = true
+			}
+		}
+		s.mu.RUnlock()
+	}
+
+	v.Mu.Lock()
+	v.TotalClients = allClients
+	v.Mu.Unlock()
+}
+
+func (v *ValueEvent) CountClientsForKey(key string) int {
+	shard := v.getShard(key)
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
+
+	if clients, exists := shard.clients[key]; exists {
 		return len(clients)
 	}
 	return 0
 }
 
-// Global event server
+func (v *ValueEvent) GetStats() map[string]interface{} {
+	return map[string]interface{}{
+		"active_connections": atomic.LoadInt32(&v.activeConns),
+		"max_connections":    v.maxConnections,
+		"dropped_messages":   atomic.LoadInt64(&v.droppedMessages),
+		"total_messages":     atomic.LoadInt64(&v.totalMessages),
+		"workers":            v.workers,
+		"shards":             v.shardCount,
+	}
+}
+
+// ValueEventServer is the global event server instance
 var ValueEventServer *ValueEvent
 
 func init() {
 	ValueEventServer = NewValueEventServer()
 }
 
-// When you want to update a value and notify clients for a specific key
+// SetStream sends a value update to all clients subscribed to the given key
 func SetStream(dbKey string, newValue int) {
-	// Use a non-blocking send with default case to prevent blocking
+	// Use non-blocking send to prevent blocking
 	select {
 	case ValueEventServer.Message <- KeyValue{Key: dbKey, Value: newValue}:
 		// Message sent successfully
@@ -148,26 +344,30 @@ func SetStream(dbKey string, newValue int) {
 }
 
 func CloseStream(dbKey string) {
-	// First collect all channels to be closed while holding the lock
-	var channelsToClose []chan int
+	// Get all clients for this key across all shards
+	shard := ValueEventServer.getShard(dbKey)
 
-	ValueEventServer.Mu.Lock()
-	if clients, exists := ValueEventServer.TotalClients[dbKey]; exists {
-		// Create a copy of all channels we need to close
-		for clientChan := range clients {
-			channelsToClose = append(channelsToClose, clientChan)
+	clientCount := 0
+
+	shard.mu.Lock()
+	if clients, exists := shard.clients[dbKey]; exists {
+		clientCount = len(clients)
+		// Just remove from map, don't close channels
+		// Channels are managed by the HTTP handlers
+		delete(shard.clients, dbKey)
+	}
+	shard.mu.Unlock()
+
+	if clientCount > 0 {
+		log.Printf("Removed all stream clients for key %s (%d clients)", dbKey, clientCount)
+	}
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
 		}
-		// Remove the entry from the map
-		delete(ValueEventServer.TotalClients, dbKey)
 	}
-	ValueEventServer.Mu.Unlock()
-
-	// Now close the channels after releasing the lock
-	for _, ch := range channelsToClose {
-		close(ch)
-	}
-
-	if len(channelsToClose) > 0 {
-		log.Printf("Closed all streams for key %s (%d clients)", dbKey, len(channelsToClose))
-	}
+	return defaultValue
 }
