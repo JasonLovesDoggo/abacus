@@ -22,11 +22,13 @@ type ValueEvent struct {
 	shards          []*shard
 	shardCount      int
 	workers         int
-	workerPool      chan workerTask
+	workerPools     []chan workerTask // One pool per dispatcher
+	dispatchers     int
 	maxConnections  int32
 	activeConns     int32
 	droppedMessages int64
 	totalMessages   int64
+	queueDepth      int64
 	clientTimeout   time.Duration
 	shutdown        chan struct{}
 	wg              sync.WaitGroup
@@ -57,10 +59,43 @@ type workerTask struct {
 func NewValueEventServer() *ValueEvent {
 	// Get configuration from environment with sensible defaults
 	workers := getEnvInt("SSE_WORKER_COUNT", runtime.NumCPU())
-	bufferSize := getEnvInt("SSE_BUFFER_SIZE", 1000)
-	maxConns := getEnvInt("MAX_SSE_CONNECTIONS", 100000)
+	// Ensure minimum workers for stability
+	if workers < 2 {
+		workers = 2
+	}
+
+	// Increase buffer size for high connection counts
+	bufferSize := getEnvInt("SSE_BUFFER_SIZE", 10000)
+	maxConns := getEnvInt("MAX_SSE_CONNECTIONS", 20000)
 	clientTimeout := time.Duration(getEnvInt("SSE_CLIENT_TIMEOUT_MS", 1000)) * time.Millisecond
-	shardCount := getEnvInt("SSE_SHARD_COUNT", 32)
+
+	// Auto-calculate shards based on workers if not specified
+	shardCount := getEnvInt("SSE_SHARD_COUNT", 0)
+	if shardCount <= 0 {
+		// Use 4 shards per worker for good distribution
+		shardCount = workers * 4
+		if shardCount < 8 {
+			shardCount = 8 // Minimum shards
+		}
+		if shardCount > 64 {
+			shardCount = 64 // Maximum shards to avoid overhead
+		}
+	}
+
+	// Calculate dispatchers based on expected load
+	dispatchers := getEnvInt("SSE_DISPATCHERS", 4)
+	if dispatchers < 1 {
+		dispatchers = 1
+	}
+
+	// Scale workers based on connection capacity
+	if maxConns > 10000 {
+		// Add more workers for high connection counts
+		minWorkers := maxConns / 2000
+		if workers < minWorkers {
+			workers = minWorkers
+		}
+	}
 
 	event := &ValueEvent{
 		// Public channels for compatibility
@@ -72,7 +107,8 @@ func NewValueEventServer() *ValueEvent {
 		// Optimized implementation
 		shardCount:     shardCount,
 		workers:        workers,
-		workerPool:     make(chan workerTask, bufferSize*2),
+		dispatchers:    dispatchers,
+		workerPools:    make([]chan workerTask, dispatchers),
 		maxConnections: int32(maxConns),
 		clientTimeout:  clientTimeout,
 		shutdown:       make(chan struct{}),
@@ -86,21 +122,32 @@ func NewValueEventServer() *ValueEvent {
 		}
 	}
 
-	// Start worker pool
-	for i := 0; i < workers; i++ {
-		event.wg.Add(1)
-		go event.worker(i)
+	// Create worker pools and workers for each dispatcher
+	workersPerDispatcher := workers / dispatchers
+	if workersPerDispatcher < 1 {
+		workersPerDispatcher = 1
 	}
 
-	// Start dispatcher
-	event.wg.Add(1)
-	go event.dispatcher()
+	for d := 0; d < dispatchers; d++ {
+		// Create a worker pool for this dispatcher
+		event.workerPools[d] = make(chan workerTask, bufferSize/dispatchers*2)
+
+		// Start workers for this dispatcher
+		for w := 0; w < workersPerDispatcher; w++ {
+			event.wg.Add(1)
+			go event.worker(d, w, event.workerPools[d])
+		}
+
+		// Start the dispatcher
+		event.wg.Add(1)
+		go event.dispatcher(d)
+	}
 
 	// Start compatibility sync
 	go event.syncTotalClients()
 
-	log.Printf("SSE server started with %d workers, %d shards, max %d connections",
-		workers, shardCount, maxConns)
+	log.Printf("SSE server started with %d workers, %d dispatchers, %d shards, max %d connections",
+		workers, dispatchers, shardCount, maxConns)
 
 	return event
 }
@@ -111,16 +158,18 @@ func (v *ValueEvent) getShard(key string) *shard {
 	return v.shards[h.Sum32()%uint32(v.shardCount)]
 }
 
-func (v *ValueEvent) dispatcher() {
+func (v *ValueEvent) dispatcher(id int) {
 	defer v.wg.Done()
+	workerPool := v.workerPools[id]
 
 	for {
 		select {
 		case <-v.shutdown:
-			close(v.workerPool)
+			close(workerPool)
 			return
 
 		case newClient := <-v.NewClients:
+			atomic.AddInt64(&v.queueDepth, 1)
 			// Check connection limit
 			currentConns := atomic.LoadInt32(&v.activeConns)
 			if currentConns >= v.maxConnections {
@@ -131,17 +180,32 @@ func (v *ValueEvent) dispatcher() {
 			}
 
 			atomic.AddInt32(&v.activeConns, 1)
-			v.workerPool <- workerTask{
+			select {
+			case workerPool <- workerTask{
 				taskType: "add",
 				key:      newClient.Key,
 				client:   newClient.Client,
+			}:
+				atomic.AddInt64(&v.queueDepth, -1)
+			default:
+				// Worker pool full, try again with small delay
+				go func(nc KeyClientPair) {
+					time.Sleep(10 * time.Millisecond)
+					v.NewClients <- nc
+				}(newClient)
 			}
 
 		case closedClient := <-v.ClosedClients:
-			v.workerPool <- workerTask{
+			select {
+			case workerPool <- workerTask{
 				taskType: "remove",
 				key:      closedClient.Key,
 				client:   closedClient.Client,
+			}:
+				// Sent successfully
+			default:
+				// Queue full, drop the remove (client already gone anyway)
+				log.Printf("Dropped remove for key %s (queue full)", closedClient.Key)
 			}
 
 		case keyValue := <-v.Message:
@@ -151,10 +215,10 @@ func (v *ValueEvent) dispatcher() {
 	}
 }
 
-func (v *ValueEvent) worker(id int) {
+func (v *ValueEvent) worker(dispatcherId, workerId int, workerPool chan workerTask) {
 	defer v.wg.Done()
 
-	for task := range v.workerPool {
+	for task := range workerPool {
 		switch task.taskType {
 		case "add":
 			v.addClient(task.key, task.client)
@@ -218,9 +282,10 @@ func (v *ValueEvent) broadcastMessage(kv KeyValue) {
 	}
 	shard.mu.RUnlock()
 
-	// Parallel broadcast with batching
+	// Parallel broadcast with batching across all worker pools
 	var wg sync.WaitGroup
-	batchSize := len(clientList) / v.workers
+	totalWorkers := v.workers
+	batchSize := len(clientList) / totalWorkers
 	if batchSize < 1 {
 		batchSize = 1
 	}
@@ -232,12 +297,24 @@ func (v *ValueEvent) broadcastMessage(kv KeyValue) {
 		}
 
 		wg.Add(1)
-		go func(clients []chan int) {
+		// Use different worker pools for better distribution
+		poolIndex := (i / batchSize) % v.dispatchers
+		go func(clients []chan int, poolIdx int) {
 			defer wg.Done()
 			for _, client := range clients {
-				v.sendToClient(client, kv.Value)
+				// Try to use the worker pool for this batch
+				select {
+				case v.workerPools[poolIdx] <- workerTask{
+					taskType: "send",
+					client:   client,
+					value:    kv.Value,
+				}:
+				default:
+					// If pool is full, send directly
+					v.sendToClient(client, kv.Value)
+				}
 			}
-		}(clientList[i:end])
+		}(clientList[i:end], poolIndex)
 	}
 
 	// Wait with timeout
@@ -315,13 +392,25 @@ func (v *ValueEvent) CountClientsForKey(key string) int {
 }
 
 func (v *ValueEvent) GetStats() map[string]interface{} {
+	// Count active keys across all shards
+	activeKeys := 0
+
+	for _, s := range v.shards {
+		s.mu.RLock()
+		activeKeys += len(s.clients)
+		s.mu.RUnlock()
+	}
+
 	return map[string]interface{}{
 		"active_connections": atomic.LoadInt32(&v.activeConns),
 		"max_connections":    v.maxConnections,
 		"dropped_messages":   atomic.LoadInt64(&v.droppedMessages),
 		"total_messages":     atomic.LoadInt64(&v.totalMessages),
+		"queue_depth":        atomic.LoadInt64(&v.queueDepth),
 		"workers":            v.workers,
+		"dispatchers":        v.dispatchers,
 		"shards":             v.shardCount,
+		"active_keys":        activeKeys,
 	}
 }
 
