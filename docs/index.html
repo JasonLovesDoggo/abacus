@@ -610,6 +610,12 @@
 ⇒ data: {"value": 36}
 </pre>
 
+    <h3 class="endpoint">/listeners/:namespace/*key</h3>
+    <p>Get the current number of active SSE listeners for a specific counter. Useful for monitoring real-time subscriber count.</p>
+    <pre class="success">
+GET /listeners/mysite.com/visits
+⇒ 200 {"listeners": 42}</pre>
+
     <h3 id="create" class="endpoint">/create/:namespace/*key</h3>
     <p>Create a new counter with an optional initial value (default 0). Specify both namespace and key. </p>
     <pre class="info">Note about <b>admin_key</b>: this is the only time you will be able to see it, if you lose the key then you lose access to control the counter. </pre>

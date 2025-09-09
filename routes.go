@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,13 +36,14 @@ func StreamValueView(c *gin.Context) {
 		return
 	}
 
-	// Set SSE headers
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-
 	// Initialize client channel with a buffer to prevent blocking
-	clientChan := make(chan int, 10)
+	clientBufferSize := 100
+	if envSize := os.Getenv("SSE_CLIENT_BUFFER_SIZE"); envSize != "" {
+		if size, err := strconv.Atoi(envSize); err == nil && size > 0 {
+			clientBufferSize = size
+		}
+	}
+	clientChan := make(chan int, clientBufferSize)
 
 	// Create a context that's canceled when the client disconnects
 	ctx := c.Request.Context()
@@ -461,6 +463,23 @@ func UpdateByView(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
 	go utils.SetStream(dbKey, int(val))
+}
+
+func ListenersView(c *gin.Context) {
+	namespace, key := utils.GetNamespaceKey(c)
+	if namespace == "" || key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid namespace or key"})
+		return
+	}
+
+	dbKey := utils.CreateKey(c, namespace, key, false)
+	if dbKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key format"})
+		return
+	}
+
+	listeners := utils.ValueEventServer.CountClientsForKey(dbKey)
+	c.JSON(http.StatusOK, gin.H{"listeners": listeners})
 }
 
 func StatsView(c *gin.Context) {
