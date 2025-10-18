@@ -1,5 +1,5 @@
-
 # After malicious script
+
 ```bash
 ❯ curl localhost:8080/stream/stream/eee/ -vvv
 23:01:20.486586 [0-x] == Info: [READ] client_reset, clear readers
@@ -27,6 +27,7 @@ curl: (56) Recv failure: Connection was reset
 ```
 
 # Before malicious script
+
 ```bash
 ❯ curl localhost:8080/stream/stream/eee/ -vvv
 23:01:48.679494 [0-x] == Info: [READ] client_reset, clear readers
