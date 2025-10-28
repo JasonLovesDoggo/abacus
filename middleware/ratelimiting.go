@@ -13,7 +13,7 @@ import (
 
 var rateLimitPolicy string
 
-const rate = 3
+const rate = 10
 const limit = 30
 
 func keyFunc(c *gin.Context) string {
@@ -38,7 +38,7 @@ func beforeResponse(c *gin.Context, info ratelimit.Info) {
 }
 
 func RateLimit(client *redis.Client) gin.HandlerFunc {
-	// This makes it so each ip can only make 5 requests per second
+	// This makes it so each ip can only make 30 requests per 10 seconds
 	rateLimitPolicy = strconv.Itoa(limit) + ";w=" + strconv.Itoa(rate) // paragraph 2.1 of the IETF Draft
 	store := ratelimit.RedisStore(&ratelimit.RedisOptions{
 		RedisClient: client,

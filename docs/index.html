@@ -342,11 +342,11 @@
 
     <ul>
         <li><strong>Limit:</strong> 30 requests</li>
-        <li><strong>Window:</strong> 3 seconds</li>
+        <li><strong>Window:</strong> 10 seconds</li>
         <li><strong>Scope:</strong> Per IP address</li>
     </ul>
     <p>
-        This means that each unique IP address is allowed to make a maximum of 30 requests every 3 seconds. Exceeding
+        This means that each unique IP address is allowed to make a maximum of 30 requests every 10 seconds. Exceeding
         this limit will temporarily block further requests from that IP until your limit is up.
     </p>
     <p>If you require a higher rate limit for legitimate use cases, please contact me at <a
@@ -358,7 +358,7 @@
     <ul>
         <li><code>RateLimit-Remaining</code>: Number of requests remaining in the current window.</li>
         <li><code>RateLimit-Reset</code>: Unix timestamp indicating when the rate limit window resets.</li>
-        <li><code>RateLimit-Policy</code>: String describing the rate limit policy (e.g., "30;w=3" for 30 requests per 3
+        <li><code>RateLimit-Policy</code>: String describing the rate limit policy (e.g., "30;w=10" for 30 requests per 10
             seconds).
         </li>
         <li><code>Retry-After</code>: Number of ms to wait before retrying (included when rate limited).</li>
@@ -392,7 +392,7 @@
         `Authorization` header as a Bearer token. You get this admin key when creating a counter via <a href="#create">/create</a>.
     </p>
 
-    <p>Rate limiting is in place to ensure fair usage: 30 requests per IP address every 3 seconds.</p>
+    <p>Rate limiting is in place to ensure fair usage: 30 requests per IP address every 10 seconds.</p>
 
     <h2>Namespaces</h2>
 
@@ -725,7 +725,7 @@ GET /stats/
   "expired_keys__since_restart": "130", // number of keys expired since db's last restart
   "key_misses__since_restart": "205", // number of keys not found since db's last restart
   "total_keys": 87904, // total number of keys created
-  "version": "1.5.5", // Abacus's version
+  "version": "1.6.0", // Abacus's version
   "shard": "boujee-coorgi", // Handler shard
   "uptime": "1h23m45s" // shard uptime
 

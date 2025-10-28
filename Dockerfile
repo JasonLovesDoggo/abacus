@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./abacus -tags=jsoniter
 FROM scratch
 
 LABEL maintainer="Jason Cameron abacus@jasoncameron.dev"
-LABEL version="1.5.5"
+LABEL version="1.6.0"
 LABEL description="This is a simple countAPI service written in Go."
 
 
