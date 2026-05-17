@@ -175,6 +175,8 @@ func initSentry() {
 	if err != nil {
 		sampleRate = 0.05
 	}
+	log.Printf("Sentry: effective TracesSampleRate=%v (env SENTRY_TRACES_SAMPLE_RATE=%q)",
+		sampleRate, os.Getenv("SENTRY_TRACES_SAMPLE_RATE"))
 
 	if err := sentry.Init(sentry.ClientOptions{
 		Dsn:              dsn,
@@ -186,6 +188,13 @@ func initSentry() {
 		// v0.46.x's new "Telemetry Processor" buffer swallows transactions in
 		// some configs. Force the proven transport so transactions ship.
 		DisableTelemetryBuffer: true,
+		// Log every transaction the SDK is about to send. If this never fires
+		// for request transactions, sentrygin isn't producing them. If it does
+		// fire but they don't appear in the UI, the wire is being filtered.
+		BeforeSendTransaction: func(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
+			log.Printf("Sentry tx: name=%q op=%q spans=%d", event.Transaction, event.Type, len(event.Spans))
+			return event
+		},
 	}); err != nil {
 		log.Printf("Sentry initialization failed: %v", err)
 		return
