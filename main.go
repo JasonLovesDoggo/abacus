@@ -135,7 +135,10 @@ func startPprofServer(ctx context.Context) {
 	if strings.ToLower(os.Getenv("PPROF_ENABLED")) != "true" {
 		return
 	}
-	addr := getEnv("PPROF_ADDR", "127.0.0.1:6060")
+	// Bind to all interfaces so `fly proxy` (which routes via the 6PN private
+	// network, not loopback) can reach it. Stays private because fly.toml only
+	// forwards 8080 publicly.
+	addr := getEnv("PPROF_ADDR", ":6060")
 	// Enable block/mutex profilers (off by default in Go). Cheap rates.
 	runtime.SetBlockProfileRate(int(time.Millisecond))
 	runtime.SetMutexProfileFraction(100)
