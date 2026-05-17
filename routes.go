@@ -304,14 +304,20 @@ func CreateView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "initializer must be a number"})
 		return
 	}
-	// Get data from Redis
-	created := Client.SetNX(context.Background(), dbKey, initialValue, utils.BaseTTLPeriod)
-	if created.Val() == false {
+	AdminKey := uuid.New().String()
+	created, err := utils.CreateWithAdmin.Run(
+		context.Background(), Client,
+		[]string{dbKey, utils.CreateAdminKey(dbKey)},
+		initialValue, int(utils.BaseTTLPeriod.Seconds()), AdminKey,
+	).Int()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create. Try again later."})
+		return
+	}
+	if created == 0 {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key already exists, please use a different key."})
 		return
 	}
-	AdminKey := uuid.New().String()                                            // Create a new admin key used for deletion and control
-	Client.Set(context.Background(), utils.CreateAdminKey(dbKey), AdminKey, 0) // todo: figure out how to handle admin keys (handle alongside admin orrrrrrr separately as in a routine once a month that deletes all admin keys with no corresponding key)
 	utils.SetStream(dbKey, initialValue)
 	c.JSON(http.StatusCreated, gin.H{"key": key, "namespace": namespace, "admin_key": AdminKey, "value": initialValue})
 }
@@ -325,11 +331,18 @@ func InfoView(c *gin.Context) { // todo: write docs on what negative values mean
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	dbValue := Client.Get(context.Background(), dbKey).Val()
-	count, _ := strconv.Atoi(dbValue)
 
-	isGenuine := Client.Exists(context.Background(), utils.CreateAdminKey(dbKey)).Val() == 0
-	expiresAt := Client.TTL(context.Background(), dbKey).Val()
+	// One pipelined RTT instead of three sequential GET/EXISTS/TTL.
+	ctx := context.Background()
+	pipe := Client.Pipeline()
+	getCmd := pipe.Get(ctx, dbKey)
+	existsCmd := pipe.Exists(ctx, utils.CreateAdminKey(dbKey))
+	ttlCmd := pipe.TTL(ctx, dbKey)
+	_, _ = pipe.Exec(ctx) // per-cmd errors handled by Val() falling back to zero values
+
+	count, _ := strconv.Atoi(getCmd.Val())
+	isGenuine := existsCmd.Val() == 0
+	expiresAt := ttlCmd.Val()
 	exists := expiresAt != -2
 	if !exists {
 		count = -1
@@ -346,9 +359,8 @@ func DeleteView(c *gin.Context) {
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	adminDBKey := utils.CreateAdminKey(dbKey)    // Create the admin key
-	Client.Del(context.Background(), dbKey)      // Delete the normal key
-	Client.Del(context.Background(), adminDBKey) // delete the admin key as it's now useless
+	// Single variadic DEL = 1 RTT instead of 2.
+	Client.Del(context.Background(), dbKey, utils.CreateAdminKey(dbKey))
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Deleted key: " + dbKey})
 	utils.CloseStream(dbKey)
 }
@@ -437,20 +449,18 @@ func UpdateByView(c *gin.Context) {
 		return
 	}
 
-	exists := Client.Exists(context.Background(), dbKey).Val() == 0
-	if exists {
+	// One round trip, race-free: atomic exists-check + INCRBY.
+	val, err := utils.IncrByIfExists.Run(context.Background(), Client, []string{dbKey}, incrByValue).Int64()
+	if errors.Is(err, redis.Nil) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Key does not exist, please first create it using /create."})
 		return
 	}
-
-	// Get data from Redis
-	val, err := Client.IncrByFloat(context.Background(), dbKey, float64(incrByValue)).Result()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set data. Try again later."})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"value": int64(val)})
+	c.JSON(http.StatusOK, gin.H{"value": val})
 	go utils.SetStream(dbKey, int(val))
 }
 
