@@ -22,6 +22,8 @@ import (
 
 	"pkg.jsn.cam/abacus/middleware"
 
+	"github.com/getsentry/sentry-go"
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
 
@@ -113,9 +115,32 @@ func setupMockRedis() {
 	})
 }
 
+func initSentry() {
+	dsn := getEnv("SENTRY_DSN", "https://76e82ebd5a8b301511aa8a518f1baf36@o4505315141025792.ingest.us.sentry.io/4511403097194496")
+	if strings.ToLower(os.Getenv("SENTRY_ENABLED")) == "false" || os.Getenv("TESTING") == "true" {
+		return
+	}
+
+	sampleRate, err := strconv.ParseFloat(getEnv("SENTRY_TRACES_SAMPLE_RATE", "0.05"), 64)
+	if err != nil {
+		sampleRate = 0.05
+	}
+
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:              dsn,
+		EnableTracing:    true,
+		TracesSampleRate: sampleRate,
+		Release:          "abacus@" + Version,
+		Environment:      getEnv("SENTRY_ENV", "production"),
+	}); err != nil {
+		log.Printf("Sentry initialization failed: %v", err)
+	}
+}
+
 func CreateRouter() *gin.Engine {
 	utils.InitializeStatsManager(Client)
 	r := gin.Default()
+	r.Use(sentrygin.New(sentrygin.Options{Repanic: true}))
 
 	if gin.Mode() == gin.DebugMode {
 		// Register pprof handlers
@@ -213,6 +238,9 @@ func main() {
 
 	utils.LoadEnv()
 	StartTime = time.Now()
+
+	initSentry()
+	defer sentry.Flush(2 * time.Second)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
