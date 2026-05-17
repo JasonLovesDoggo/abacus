@@ -199,8 +199,8 @@ func initSentry() {
 
 	tx := sentry.StartTransaction(context.Background(), "smoke_test.startup",
 		sentry.WithOpName("startup"),
+		sentry.WithSpanSampled(sentry.SampledTrue),
 	)
-	tx.Sampled = sentry.SampledTrue
 	span := tx.StartChild("smoke_test.span")
 	time.Sleep(5 * time.Millisecond)
 	span.Finish()
