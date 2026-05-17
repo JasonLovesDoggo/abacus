@@ -30,19 +30,15 @@ func Auth(Client *redis.Client) gin.HandlerFunc {
 		}
 
 		adminDBKey := utils.CreateRawAdminKey(c)
-		//if adminDBKey == "" {
-		//	c.JSON(http.StatusInternalServerError, gin.H{"error": "There is no"})
-		//	c.Abort() // Abort further processing
-		//	return
-		//}
 		adminKey, err := Client.Get(context.Background(), adminDBKey).Result()
-		if errors.Is(err, redis.Nil) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "This entry is genuine and does not have an admin key. You cannot delete it. If you wanted to delete it, you should have created it with the /create endpoint."})
-
-		} else if adminKey != authToken {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "token is invalid"})
-			c.Abort() // Abort further processing
-		} else { // token is valid.
+		switch {
+		case errors.Is(err, redis.Nil):
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "This entry is genuine and does not have an admin key. You cannot delete it. If you wanted to delete it, you should have created it with the /create endpoint."})
+		case err != nil:
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify token. Try again later."})
+		case adminKey != authToken:
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token is invalid"})
+		default:
 			c.Next()
 		}
 	}

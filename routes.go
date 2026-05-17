@@ -100,13 +100,15 @@ func StreamValueView(c *gin.Context) {
 		}
 	}()
 
-	// Send initial value
-	initialVal := Client.Get(context.Background(), dbKey).Val()
-	if count, err := strconv.Atoi(initialVal); err == nil {
+	// Send initial value. redis.Nil = key doesn't exist yet (legit, just stream
+	// future updates). Any other error gets logged so it isn't silently lost.
+	initialVal, err := Client.Get(context.Background(), dbKey).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		log.Printf("StreamValueView initial GET for %s failed: %v", dbKey, err)
+	} else if count, convErr := strconv.Atoi(initialVal); convErr == nil {
 		// Keep your exact format
-		_, err := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count))
-		if err != nil {
-			log.Printf("Error writing to client: %v", err)
+		if _, werr := c.Writer.WriteString(fmt.Sprintf("data: {\"value\":%d}\n\n", count)); werr != nil {
+			log.Printf("Error writing to client: %v", werr)
 			return
 		}
 		c.Writer.Flush()
@@ -338,7 +340,20 @@ func InfoView(c *gin.Context) { // todo: write docs on what negative values mean
 	getCmd := pipe.Get(ctx, dbKey)
 	existsCmd := pipe.Exists(ctx, utils.CreateAdminKey(dbKey))
 	ttlCmd := pipe.TTL(ctx, dbKey)
-	_, _ = pipe.Exec(ctx) // per-cmd errors handled by Val() falling back to zero values
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+		// Real transport failure. Don't fabricate exists=true.
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
+	// Re-check each cmd individually; pipeline Exec returns only the first error.
+	if err := existsCmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
+	if err := ttlCmd.Err(); err != nil && !errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
+		return
+	}
 
 	count, _ := strconv.Atoi(getCmd.Val())
 	isGenuine := existsCmd.Val() == 0
@@ -468,9 +483,22 @@ func StatsView(c *gin.Context) {
 	// get average ttl using INFO
 
 	ctx := context.Background()
-	infoStr, err := Client.Info(ctx).Result()
+
+	// INFO + 4 stats GETs in one pipelined RTT instead of 5 sequential ones.
+	pipe := Client.Pipeline()
+	infoCmd := pipe.Info(ctx)
+	totalCmd := pipe.Get(ctx, "stats:Total")
+	hitsCmd := pipe.Get(ctx, "stats:hit")
+	getsCmd := pipe.Get(ctx, "stats:get")
+	createCmd := pipe.Get(ctx, "stats:create")
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get stats. Try again later."})
+		return
+	}
+	infoStr, err := infoCmd.Result()
 	if err != nil {
-		panic(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get stats. Try again later."})
+		return
 	}
 
 	infoDict := make(map[string]map[string]string)
@@ -478,6 +506,9 @@ func StatsView(c *gin.Context) {
 
 	for _, section := range sections {
 		lines := strings.Split(section, "\r\n")
+		if len(lines) == 0 || len(lines[0]) < 2 {
+			continue
+		}
 		sectionName := lines[0][2:] // Remove "# " prefix
 
 		infoDict[sectionName] = make(map[string]string)
@@ -491,12 +522,11 @@ func StatsView(c *gin.Context) {
 		}
 	}
 
-	total, _ := strconv.Atoi(Client.Get(ctx, "stats:Total").Val())
-
-	hits, _ := strconv.Atoi(Client.Get(ctx, "stats:hit").Val())
-	gets, _ := strconv.Atoi(Client.Get(ctx, "stats:get").Val())
-
-	create, _ := strconv.Atoi(Client.Get(ctx, "stats:create").Val())
+	// redis.Nil on these counters just means "never been incremented yet" → 0.
+	total, _ := strconv.Atoi(totalCmd.Val())
+	hits, _ := strconv.Atoi(hitsCmd.Val())
+	gets, _ := strconv.Atoi(getsCmd.Val())
+	create, _ := strconv.Atoi(createCmd.Val())
 
 	totalKeys := create + (hits / 60) // 60 hits per key (average taken from the first 6m requests) ~ Json
 
