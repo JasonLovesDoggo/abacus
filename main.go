@@ -9,20 +9,16 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
-
 	"github.com/anandvarma/namegen"
-
-	"github.com/redis/go-redis/v9"
 
 	"pkg.jsn.cam/abacus/middleware"
 
-	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	analytics "github.com/tom-draper/api-analytics/analytics/go/gin"
@@ -115,6 +111,54 @@ func setupMockRedis() {
 	})
 }
 
+func registerPprof(g *gin.RouterGroup) {
+	g.GET("/", gin.WrapF(pprof.Index))
+	g.GET("/cmdline", gin.WrapF(pprof.Cmdline))
+	g.GET("/profile", gin.WrapF(pprof.Profile))
+	g.GET("/symbol", gin.WrapF(pprof.Symbol))
+	g.GET("/trace", gin.WrapF(pprof.Trace))
+	g.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+	g.GET("/block", gin.WrapH(pprof.Handler("block")))
+	g.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+	g.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+	g.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+	g.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+}
+
+// startPprofServer binds pprof to a private port (default 6060) so it never
+// touches the public listener. Enable with PPROF_ENABLED=true and reach it via
+// `fly proxy 6060 -a j-abacus`.
+func startPprofServer(ctx context.Context) {
+	if strings.ToLower(os.Getenv("PPROF_ENABLED")) != "true" {
+		return
+	}
+	addr := getEnv("PPROF_ADDR", "127.0.0.1:6060")
+	// Enable block/mutex profilers (off by default in Go). Cheap rates.
+	runtime.SetBlockProfileRate(int(time.Millisecond))
+	runtime.SetMutexProfileFraction(100)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		log.Printf("pprof listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("pprof server error: %v", err)
+		}
+	}()
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+}
+
 func initSentry() {
 	dsn := getEnv("SENTRY_DSN", "https://76e82ebd5a8b301511aa8a518f1baf36@o4505315141025792.ingest.us.sentry.io/4511403097194496")
 	if strings.ToLower(os.Getenv("SENTRY_ENABLED")) == "false" || os.Getenv("TESTING") == "true" {
@@ -143,21 +187,8 @@ func CreateRouter() *gin.Engine {
 	r.Use(sentrygin.New(sentrygin.Options{Repanic: true}))
 
 	if gin.Mode() == gin.DebugMode {
-		// Register pprof handlers
-		pproRouter := r.Group("/debug/pprof")
-		{
-			pproRouter.GET("/", gin.WrapF(pprof.Index))
-			pproRouter.GET("/cmdline", gin.WrapF(pprof.Cmdline))
-			pproRouter.GET("/profile", gin.WrapF(pprof.Profile))
-			pproRouter.GET("/symbol", gin.WrapF(pprof.Symbol))
-			pproRouter.GET("/trace", gin.WrapF(pprof.Trace))
-			pproRouter.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
-			pproRouter.GET("/block", gin.WrapH(pprof.Handler("block")))
-			pproRouter.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
-			pproRouter.GET("/heap", gin.WrapH(pprof.Handler("heap")))
-			pproRouter.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
-			pproRouter.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
-		}
+		// In debug, expose pprof on the main router for convenience.
+		registerPprof(r.Group("/debug/pprof"))
 	}
 
 	// Cors
@@ -252,6 +283,7 @@ func main() {
 		RateLimitClient.AddHook(utils.RedisTimingHook{Pool: "ratelimit"})
 	}
 	utils.InitMetrics(ctx, Client, RateLimitClient)
+	startPprofServer(ctx)
 
 	r := CreateRouter()
 	srv := &http.Server{
