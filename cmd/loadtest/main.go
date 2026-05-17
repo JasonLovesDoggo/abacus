@@ -82,10 +82,7 @@ func main() {
 
 	// Connection establishment phase
 	log.Println("Starting connection ramp-up...")
-	connectionBatch := *targetConnections / (*rampUpRate / 100)
-	if connectionBatch < 1 {
-		connectionBatch = 1
-	}
+	connectionBatch := max(*targetConnections/(*rampUpRate/100), 1)
 
 	for i := 0; i < *targetConnections; i += connectionBatch {
 		select {
