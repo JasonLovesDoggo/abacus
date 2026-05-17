@@ -182,13 +182,44 @@ func initSentry() {
 		TracesSampleRate: sampleRate,
 		Release:          "abacus@" + Version,
 		Environment:      getEnv("SENTRY_ENV", "production"),
+		Debug:            strings.ToLower(os.Getenv("SENTRY_DEBUG")) == "true",
 	}); err != nil {
 		log.Printf("Sentry initialization failed: %v", err)
+		return
 	}
+
+	// Smoke-test the wire: one tagged message + one transaction with a span.
+	// If neither shows up in Sentry, the DSN/network is broken; if the message
+	// lands but no transaction appears, it's a sampling/UI issue, not the SDK.
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetTag("smoke_test", "startup")
+		scope.SetLevel(sentry.LevelInfo)
+		sentry.CaptureMessage("abacus startup: sentry wire OK (release=" + Version + ")")
+	})
+
+	tx := sentry.StartTransaction(context.Background(), "smoke_test.startup",
+		sentry.WithOpName("startup"),
+	)
+	tx.Sampled = sentry.SampledTrue
+	span := tx.StartChild("smoke_test.span")
+	time.Sleep(5 * time.Millisecond)
+	span.Finish()
+	tx.Finish()
+
+	// Force the events out now instead of waiting for the batcher.
+	sentry.Flush(3 * time.Second)
+	log.Println("Sentry smoke test sent (message + transaction). Look for 'smoke_test' tag.")
 }
 
 func CreateRouter() *gin.Engine {
 	utils.InitializeStatsManager(Client)
+
+	// Async stdout for gin's access log so per-request writes never block on a
+	// stdout flush. Gin's Logger reads this writer when Default() runs below.
+	asyncOut := utils.DefaultAsyncStdout()
+	gin.DefaultWriter = asyncOut
+	gin.DefaultErrorWriter = asyncOut
+
 	r := gin.Default()
 	r.Use(sentrygin.New(sentrygin.Options{Repanic: true}))
 
