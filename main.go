@@ -183,6 +183,9 @@ func initSentry() {
 		Release:          "abacus@" + Version,
 		Environment:      getEnv("SENTRY_ENV", "production"),
 		Debug:            strings.ToLower(os.Getenv("SENTRY_DEBUG")) == "true",
+		// v0.46.x's new "Telemetry Processor" buffer swallows transactions in
+		// some configs. Force the proven transport so transactions ship.
+		DisableTelemetryBuffer: true,
 	}); err != nil {
 		log.Printf("Sentry initialization failed: %v", err)
 		return
