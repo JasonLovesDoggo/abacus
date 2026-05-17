@@ -93,6 +93,7 @@ func (v *ValueEvent) listen() {
 					// Message sent successfully
 				default:
 					// Channel full, client is slow - mark for removal
+					SSEClientDrops.Add(1)
 					failedClients = append(failedClients, clientChan)
 				}
 			}
@@ -143,6 +144,7 @@ func SetStream(dbKey string, newValue int) {
 	case ValueEventServer.Message <- KeyValue{Key: dbKey, Value: newValue}:
 		// Message sent successfully
 	default:
+		SSEMessageDrops.Add(1)
 		log.Printf("Warning: Message channel full, update for key %s dropped", dbKey)
 	}
 }

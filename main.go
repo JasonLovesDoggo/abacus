@@ -245,6 +245,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	if Client != nil {
+		Client.AddHook(utils.RedisTimingHook{Pool: "main"})
+	}
+	if RateLimitClient != nil {
+		RateLimitClient.AddHook(utils.RedisTimingHook{Pool: "ratelimit"})
+	}
+	utils.InitMetrics(ctx, Client, RateLimitClient)
+
 	r := CreateRouter()
 	srv := &http.Server{
 		Addr:    ":" + getEnv("PORT", "8080"),
