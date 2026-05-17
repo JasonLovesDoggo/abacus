@@ -12,6 +12,10 @@ auto_start_machines = true
 min_machines_running = 1
 processes = ["app"]
 
+[metrics]
+port = 9091
+path = "/metrics"
+
 [[http_service.checks]]
 grace_period = "10s"
 interval = "30s"

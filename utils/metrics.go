@@ -104,21 +104,29 @@ func (h RedisTimingHook) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 }
 
 func recordCmd(pool, name string, start time.Time, err error) {
-	if meter == nil {
-		return
-	}
+	dur := time.Since(start)
 	status := "ok"
-	if err != nil && !errors.Is(err, redis.Nil) {
+	isErr := err != nil && !errors.Is(err, redis.Nil)
+	if isErr {
 		status = "error"
 	}
-	meter.Distribution(
-		"redis.cmd.duration",
-		float64(time.Since(start).Microseconds())/1000.0,
-		sentry.WithUnit(sentry.UnitMillisecond),
-		sentry.WithAttributes(
-			attribute.String("pool", pool),
-			attribute.String("cmd", name),
-			attribute.String("status", status),
-		),
-	)
+
+	if Prom.registered {
+		Prom.redisCmdDuration.WithLabelValues(pool, name).Observe(dur.Seconds())
+		if isErr {
+			Prom.redisCmdErrors.WithLabelValues(pool, name).Inc()
+		}
+	}
+	if meter != nil {
+		meter.Distribution(
+			"redis.cmd.duration",
+			float64(dur.Microseconds())/1000.0,
+			sentry.WithUnit(sentry.UnitMillisecond),
+			sentry.WithAttributes(
+				attribute.String("pool", pool),
+				attribute.String("cmd", name),
+				attribute.String("status", status),
+			),
+		)
+	}
 }

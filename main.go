@@ -332,6 +332,7 @@ func main() {
 		RateLimitClient.AddHook(utils.RedisTimingHook{Pool: "ratelimit"})
 	}
 	utils.InitMetrics(ctx, Client, RateLimitClient)
+	utils.InitPrometheus(ctx, getEnv("METRICS_ADDR", ":9091"), Client, RateLimitClient)
 	startPprofServer(ctx)
 
 	r := CreateRouter()
