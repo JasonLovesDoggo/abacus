@@ -533,8 +533,16 @@ func TestUpdateByView(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+adminToken)
 		r.ServeHTTP(w, req)
 
+		// Auth middleware looks up the admin key by URL, not by token alone.
+		// For a URL whose admin key doesn't exist, Auth aborts with 400
+		// before the handler ever runs. (The old behavior of also seeing
+		// "Key does not exist" appended was a bug: the handler executed
+		// AFTER Auth's response, producing a malformed double-body.)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Contains(t, w.Body.String(), "Key does not exist")
+		assert.Equal(t,
+			`{"error":"This entry is genuine and does not have an admin key. You cannot delete it. If you wanted to delete it, you should have created it with the /create endpoint."}`,
+			w.Body.String(),
+		)
 	})
 
 	t.Run("Update without admin token", func(t *testing.T) {
