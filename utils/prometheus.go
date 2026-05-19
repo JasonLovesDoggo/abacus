@@ -28,7 +28,12 @@ var Prom = struct {
 		prometheus.HistogramOpts{
 			Name:    "abacus_redis_cmd_duration_seconds",
 			Help:    "Redis command latency, by pool and command name.",
-			Buckets: prometheus.ExponentialBucketsRange(0.0001, 2.0, 14), // 100us .. 2s
+			// 20 exponential buckets from 100µs to 30s. The previous 2s ceiling
+			// hid actual tail latency during Redis brownouts — the histogram
+			// would report "2.00s" for every slow cmd because anything past 2s
+			// landed in +Inf and histogram_quantile clamps to the top finite
+			// bucket. 30s covers the worst plausible pool-timeout + retry case.
+			Buckets: prometheus.ExponentialBucketsRange(0.0001, 30.0, 20),
 		},
 		[]string{"pool", "cmd"},
 	),
