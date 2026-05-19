@@ -53,6 +53,10 @@ func newTestRouterWithRoutes() *gin.Engine {
 	r.POST("/create/:namespace/*key", func(c *gin.Context) { c.JSON(http.StatusCreated, gin.H{"ok": true}) })
 	r.GET("/info/:namespace/*key", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 	r.GET("/healthcheck", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
+	// SSE endpoint — same route shape as the real /stream/:namespace/*key.
+	// Handler just writes immediately; the test only cares that the histogram
+	// records (or doesn't record) it, not that it actually streams.
+	r.GET("/stream/:namespace/*key", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 	return r
 }
 
@@ -121,26 +125,51 @@ func TestPrometheus_StatusCodesCollapseIntoClasses(t *testing.T) {
 	require.Equal(t, 3, count, "9 status codes across 3 classes must produce 3 series, got: %v", combos)
 }
 
-// /healthcheck and /metrics must be excluded entirely — they're scraped on
-// fixed timers and would dominate the bucket counts.
-func TestPrometheus_ExcludedRoutesNotRecorded(t *testing.T) {
+// /healthcheck must be excluded entirely — Fly scrapes it on a fixed timer
+// and it would dominate the bucket counts without telling us anything about
+// user-facing latency.
+func TestPrometheus_HealthcheckNotRecorded(t *testing.T) {
 	resetMetric()
 	r := newTestRouterWithRoutes()
 
-	// Hit healthcheck many times.
 	for i := 0; i < 100; i++ {
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/healthcheck", nil)
-		r.ServeHTTP(w, req)
+		r.ServeHTTP(w, httptest.NewRequest("GET", "/healthcheck", nil))
 	}
 
-	// Also hit a real route once so the metric isn't entirely empty.
+	// Hit a real route once so the metric isn't entirely empty.
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest("GET", "/get/ns/key", nil))
 
 	count, combos := metricLabelCombos(t)
 	require.Equal(t, 1, count, "healthcheck must be excluded; only /get should remain. got: %v", combos)
 	require.NotContains(t, combos[0], "/healthcheck")
+}
+
+// SSE (/stream/:namespace/*key) must be excluded entirely. Connections are
+// held open for the lifetime of the subscriber. Recording them in the same
+// histogram as request/response endpoints would land every sample in the
+// top buckets (15s/30s/+Inf) and poison the global percentile math on every
+// other panel.
+func TestPrometheus_SSENotRecorded(t *testing.T) {
+	resetMetric()
+	r := newTestRouterWithRoutes()
+
+	// Hit the SSE route a bunch.
+	for i := 0; i < 10; i++ {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest("GET", "/stream/ns/key", nil))
+	}
+
+	// Hit a real route once so the metric isn't entirely empty.
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/get/ns/key", nil))
+
+	count, combos := metricLabelCombos(t)
+	require.Equal(t, 1, count, "SSE must be excluded; only /get should remain. got: %v", combos)
+	for _, c := range combos {
+		require.NotContains(t, c, "/stream", "SSE route must not appear in histogram labels")
+	}
 }
 
 // Realistic upper bound check: simulate everything the real app might emit
