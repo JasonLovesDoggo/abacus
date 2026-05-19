@@ -23,7 +23,24 @@ var Prom = struct {
 	redisCmdErrors   *prometheus.CounterVec
 	sseClientDrops   prometheus.Counter
 	sseMessageDrops  prometheus.Counter
+	HTTPRequestDur   *prometheus.HistogramVec
 }{
+	HTTPRequestDur: prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "abacus_http_request_duration_seconds",
+			Help: "End-to-end HTTP request latency per route, method, and status class.",
+			// Same shape as the Redis histogram. App-level latency is dominated
+			// by Redis time + a few hundred µs of gin/middleware overhead, so
+			// the same 100µs-to-30s range covers both healthy and brownout cases.
+			Buckets: prometheus.ExponentialBucketsRange(0.0001, 30.0, 20),
+		},
+		// route is the gin route TEMPLATE (e.g. "/hit/:namespace/:key"), not
+		// the raw URL — otherwise label cardinality is unbounded across the
+		// user-generated key space. status is the status class (2xx/4xx/5xx)
+		// for the same reason. See middleware/prometheus.go for the
+		// cardinality-safety contract.
+		[]string{"method", "route", "status"},
+	),
 	redisCmdDuration: prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "abacus_redis_cmd_duration_seconds",
@@ -70,6 +87,7 @@ func InitPrometheus(ctx context.Context, addr string, main, rl *redis.Client) {
 		Prom.redisCmdErrors,
 		Prom.sseClientDrops,
 		Prom.sseMessageDrops,
+		Prom.HTTPRequestDur,
 	)
 
 	// Live-read gauges. GaugeFunc evaluates on every scrape, so we don't need
