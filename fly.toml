@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for j-abacus on 2026-05-19T15:43:32Z
+# fly.toml app configuration file generated for j-abacus on 2026-05-19T16:01:48Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -29,9 +29,11 @@ timeout = "5s"
 path = "/healthcheck"
 
 [[vm]]
-  memory_mb = 256
+  memory_mb = 512
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2
+  memory = '512mb'
+  size = 'shared-cpu-2x'
 
 [deploy]
 strategy = "bluegreen"
