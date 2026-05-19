@@ -24,9 +24,9 @@ timeout = "5s"
 path = "/healthcheck"
 
 [[vm]]
-memory_mb = 256
+memory_mb = 512
 cpu_kind = "shared"
-cpus = 1
+cpus = 2
 
 [deploy]
 strategy = "bluegreen"
