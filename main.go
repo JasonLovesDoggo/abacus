@@ -337,6 +337,14 @@ func main() {
 	if RateLimitClient != nil {
 		RateLimitClient.AddHook(utils.RedisTimingHook{Pool: "ratelimit"})
 	}
+	// Coalesce EXPIRE calls — TTL is 6 months, refreshing more than once an
+	// hour per key is wasted bandwidth. Tunable via env for the cautious.
+	gateInterval, err := time.ParseDuration(getEnv("EXPIRE_COALESCE_INTERVAL", "1h"))
+	if err != nil {
+		gateInterval = time.Hour
+	}
+	utils.InitExpireGate(gateInterval, 1_000_000)
+
 	utils.InitMetrics(ctx, Client, RateLimitClient)
 	utils.InitPrometheus(ctx, getEnv("METRICS_ADDR", ":9091"), Client, RateLimitClient)
 	startPprofServer(ctx)

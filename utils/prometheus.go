@@ -103,6 +103,36 @@ func InitPrometheus(ctx context.Context, addr string, main, rl *redis.Client) {
 		},
 	))
 
+	// EXPIRE coalescing visibility. The ratio Skipped / (Skipped+Refreshed)
+	// tells us how much Redis traffic the gate is saving.
+	Prom.registry.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{Name: "abacus_expire_refreshed_total", Help: "EXPIRE calls actually issued (running total)."},
+		func() float64 {
+			if ExpireGate == nil {
+				return 0
+			}
+			return float64(ExpireGate.Refreshed.Load())
+		},
+	))
+	Prom.registry.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{Name: "abacus_expire_skipped_total", Help: "EXPIRE calls suppressed by the coalescer (running total)."},
+		func() float64 {
+			if ExpireGate == nil {
+				return 0
+			}
+			return float64(ExpireGate.Skipped.Load())
+		},
+	))
+	Prom.registry.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{Name: "abacus_expire_cache_size", Help: "Number of keys currently tracked by the EXPIRE coalescer."},
+		func() float64 {
+			if ExpireGate == nil {
+				return 0
+			}
+			return float64(ExpireGate.Size())
+		},
+	))
+
 	registerPoolGauges("main", main)
 	registerPoolGauges("ratelimit", rl)
 

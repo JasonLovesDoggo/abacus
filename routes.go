@@ -159,7 +159,9 @@ func HitView(c *gin.Context) {
 	go func() {
 		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
 		// see above) to ensure val is within the range of an int.
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
 	}()
 	if c.Query("callback") != "" {
 		c.JSONP(http.StatusOK, gin.H{"value": val})
@@ -195,7 +197,9 @@ func HitShieldView(c *gin.Context) {
 	go func() {
 		utils.SetStream(dbKey, int(val)) // #nosec G115 -- This is safe as we perform a check (
 		// see above) to ensure val is within the range of an int.
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
 	}()
 
 	badgeSVG, err := utils.GenerateBadge(c, val)
@@ -230,7 +234,9 @@ func GetView(c *gin.Context) {
 	}
 
 	go func() {
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
 	}()
 	intval, _ := strconv.Atoi(val)
 	if c.Query("callback") != "" {
@@ -263,7 +269,9 @@ func GetShieldView(c *gin.Context) {
 	}
 
 	go func() {
-		Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
 	}()
 
 	intval, convErr := strconv.ParseInt(val, 10, 64)
