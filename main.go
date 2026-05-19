@@ -96,6 +96,15 @@ func init() {
 			ReadTimeout:  500 * time.Millisecond,
 			WriteTimeout: 500 * time.Millisecond,
 			PoolTimeout:  1200 * time.Millisecond,
+			// go-redis defaults to 3 retries with backoff up to 512ms. During
+			// a Redis brownout this amplifies the cascade — each failing call
+			// holds a pool slot for retry₁ + backoff₁ + retry₂ + backoff₂ +
+			// retry₃ (up to ~2s) instead of just failing. One retry is enough
+			// to cover transient single-connection drops without turning the
+			// library into a cascade amplifier.
+			MaxRetries:      1,
+			MinRetryBackoff: 8 * time.Millisecond,
+			MaxRetryBackoff: 100 * time.Millisecond, // default 512ms is too patient under load
 		}
 	}
 	Client = redis.NewClient(poolOpts(DbNum))
