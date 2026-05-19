@@ -82,18 +82,24 @@ func init() {
 		log.Fatalf("Redis DB must be between 0-16: %v", DbNum)
 	}
 
-	Client = redis.NewClient(&redis.Options{
-		Addr:     ADDR, // Redis server address
-		Username: os.Getenv("REDIS_USERNAME"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       DbNum,
-	})
-	RateLimitClient = redis.NewClient(&redis.Options{
-		Addr:     ADDR, // Redis server address
-		Username: os.Getenv("REDIS_USERNAME"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       DbNum + 1,
-	})
+	// Default pool of 10 was getting timed out tens of thousands of times per
+	// day under load. Redis instance is dedicated to this app, so we can lean
+	// on it. PoolTimeout = 1.2s = fail-fast (vs the 4s default).
+	poolOpts := func(db int) *redis.Options {
+		return &redis.Options{
+			Addr:         ADDR,
+			Username:     os.Getenv("REDIS_USERNAME"),
+			Password:     os.Getenv("REDIS_PASSWORD"),
+			DB:           db,
+			PoolSize:     100,
+			MinIdleConns: 10,
+			ReadTimeout:  500 * time.Millisecond,
+			WriteTimeout: 500 * time.Millisecond,
+			PoolTimeout:  1200 * time.Millisecond,
+		}
+	}
+	Client = redis.NewClient(poolOpts(DbNum))
+	RateLimitClient = redis.NewClient(poolOpts(DbNum + 1))
 }
 
 func setupMockRedis() {
