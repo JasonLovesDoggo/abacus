@@ -67,6 +67,8 @@ jobs:
           echo "Server is running!"
 
       - name: Run k6 tests
+        env:
+          BASE_URL: http://localhost:8080
         run: |
           # Run the performance tests
           k6 run --vus 10 --duration 30s ./tests/performance.js
