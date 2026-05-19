@@ -33,13 +33,22 @@ import (
 // Worst-case cardinality: ~10 routes × ~5 methods × 5 status classes × 20
 // histogram buckets ≈ 5000 series. Safe.
 //
-// Skipped routes: /healthcheck and /metrics. They're scraped on fixed timers
-// (Fly's health check every 30s, Fly's Prometheus every 15s) and would
-// dominate the count without telling us anything about user-facing latency.
+// Skipped routes (matched on c.FullPath(), the route template):
+//
+//   - /healthcheck: scraped by Fly every 30s, would dominate the count
+//     without telling us anything about user-facing latency.
+//
+//   - /stream/:namespace/*key: SSE long-lived connections held open for
+//     the lifetime of the subscriber. Recording these in the same histogram
+//     as fast request/response endpoints would land every sample in the
+//     +Inf / 30s buckets and poison the global p50/p95/p99 math.
+//
+// (/metrics isn't listed because it's served on a separate :9091 listener
+// outside the gin router, so it never reaches this middleware.)
 func Prometheus() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		path := c.Request.URL.Path
-		if path == "/healthcheck" || path == "/metrics" {
+		switch c.FullPath() {
+		case "/healthcheck", "/stream/:namespace/*key":
 			c.Next()
 			return
 		}
