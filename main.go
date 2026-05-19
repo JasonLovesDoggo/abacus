@@ -177,56 +177,33 @@ func initSentry() {
 		return
 	}
 
-	sampleRate, err := strconv.ParseFloat(getEnv("SENTRY_TRACES_SAMPLE_RATE", "0.05"), 64)
-	if err != nil {
-		sampleRate = 0.05
-	}
-	log.Printf("Sentry: effective TracesSampleRate=%v (env SENTRY_TRACES_SAMPLE_RATE=%q)",
-		sampleRate, os.Getenv("SENTRY_TRACES_SAMPLE_RATE"))
-
+	// Error tracking only. Tracing/performance is handled by Prometheus +
+	// Grafana now (per-cmd Redis latency, per-endpoint request latency).
+	// Sentry transactions duplicated that data at a 5% sample rate and
+	// burned quota for no marginal insight.
 	if err := sentry.Init(sentry.ClientOptions{
-		Dsn:              dsn,
-		EnableTracing:    true,
-		TracesSampleRate: sampleRate,
-		Release:          "abacus@" + Version,
-		Environment:      getEnv("SENTRY_ENV", "production"),
-		Debug:            strings.ToLower(os.Getenv("SENTRY_DEBUG")) == "true",
-		// v0.46.x's new "Telemetry Processor" buffer swallows transactions in
-		// some configs. Force the proven transport so transactions ship.
-		DisableTelemetryBuffer: true,
-		// Log every transaction the SDK is about to send. If this never fires
-		// for request transactions, sentrygin isn't producing them. If it does
-		// fire but they don't appear in the UI, the wire is being filtered.
-		BeforeSendTransaction: func(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
-			log.Printf("Sentry tx: name=%q op=%q spans=%d", event.Transaction, event.Type, len(event.Spans))
-			return event
-		},
+		Dsn:         dsn,
+		Release:     "abacus@" + Version,
+		Environment: getEnv("SENTRY_ENV", "production"),
+		Debug:       strings.ToLower(os.Getenv("SENTRY_DEBUG")) == "true",
+		// EnableTracing defaults to false and TracesSampleRate to 0, so
+		// sentrygin's per-request transactions and any manual StartTransaction
+		// calls are dropped before any network work. Panic capture and
+		// CaptureException/CaptureMessage continue to work — those go through
+		// the events path, not the transactions path.
 	}); err != nil {
 		log.Printf("Sentry initialization failed: %v", err)
 		return
 	}
 
-	// Smoke-test the wire: one tagged message + one transaction with a span.
-	// If neither shows up in Sentry, the DSN/network is broken; if the message
-	// lands but no transaction appears, it's a sampling/UI issue, not the SDK.
+	// One-line wire check on startup. If this never shows up in Sentry, the
+	// DSN/network is broken; otherwise error capture is wired correctly.
 	sentry.WithScope(func(scope *sentry.Scope) {
 		scope.SetTag("smoke_test", "startup")
 		scope.SetLevel(sentry.LevelInfo)
 		sentry.CaptureMessage("abacus startup: sentry wire OK (release=" + Version + ")")
 	})
-
-	tx := sentry.StartTransaction(context.Background(), "smoke_test.startup",
-		sentry.WithOpName("startup"),
-		sentry.WithSpanSampled(sentry.SampledTrue),
-	)
-	span := tx.StartChild("smoke_test.span")
-	time.Sleep(5 * time.Millisecond)
-	span.Finish()
-	tx.Finish()
-
-	// Force the events out now instead of waiting for the batcher.
 	sentry.Flush(3 * time.Second)
-	log.Println("Sentry smoke test sent (message + transaction). Look for 'smoke_test' tag.")
 }
 
 func CreateRouter() *gin.Engine {
@@ -347,7 +324,6 @@ func main() {
 	}
 	utils.InitExpireGate(gateInterval, 1_000_000)
 
-	utils.InitMetrics(ctx, Client, RateLimitClient)
 	utils.InitPrometheus(ctx, getEnv("METRICS_ADDR", ":9091"), Client, RateLimitClient)
 	startPprofServer(ctx)
 
