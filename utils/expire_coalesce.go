@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +19,8 @@ import (
 // duplicate EXPIRE is idempotent. There is no cross-instance coordination
 // cost, which is the point.
 type ExpireCoalescer struct {
-	m        sync.Map // key string -> int64 unix-nano of last refresh
+	m sync.Map // key string -> int64 unix-nano of last refresh
+
 	interval time.Duration
 
 	// Bounded eviction: when entries exceed maxEntries, the periodic sweeper
@@ -26,17 +28,34 @@ type ExpireCoalescer struct {
 	// without bound across the long tail of one-shot keys.
 	maxEntries int
 
-	Refreshed atomic.Uint64 // observed by Prometheus gauge
+	// size is kept in sync with the map so Prometheus scrapes don't have to
+	// walk the whole sync.Map on every poll.
+	size atomic.Int64
+
+	Refreshed atomic.Uint64 // observed by Prometheus
 	Skipped   atomic.Uint64
+
+	// stop cancels the background sweeper. Allows InitExpireGate to be called
+	// more than once without leaking goroutines on the orphaned coalescer.
+	stop context.CancelFunc
 }
 
 // NewExpireCoalescer returns a coalescer that allows at most one EXPIRE per
 // `interval` per key. Starts a background sweeper that GC's stale entries
-// once per interval.
+// once per interval. Call Stop to release the sweeper goroutine.
 func NewExpireCoalescer(interval time.Duration, maxEntries int) *ExpireCoalescer {
-	e := &ExpireCoalescer{interval: interval, maxEntries: maxEntries}
-	go e.sweepLoop()
+	ctx, cancel := context.WithCancel(context.Background())
+	e := &ExpireCoalescer{interval: interval, maxEntries: maxEntries, stop: cancel}
+	go e.sweepLoop(ctx)
 	return e
+}
+
+// Stop terminates the background sweeper. Safe to call more than once.
+func (e *ExpireCoalescer) Stop() {
+	if e == nil || e.stop == nil {
+		return
+	}
+	e.stop()
 }
 
 // ShouldRefresh returns true if `interval` has passed since the last refresh
@@ -46,6 +65,10 @@ func (e *ExpireCoalescer) ShouldRefresh(key string) bool {
 	now := time.Now().UnixNano()
 	prev, loaded := e.m.LoadOrStore(key, now)
 	if !loaded {
+		// sync.Map.LoadOrStore is atomic: exactly one goroutine sees
+		// loaded=false for a given key, so the first-insertion path has no
+		// race.
+		e.size.Add(1)
 		e.Refreshed.Add(1)
 		return true
 	}
@@ -53,58 +76,65 @@ func (e *ExpireCoalescer) ShouldRefresh(key string) bool {
 		e.Skipped.Add(1)
 		return false
 	}
-	// Race-y but correct: two concurrent goroutines could both win the
-	// LoadOrStore path on the same key in the same interval. Result is one
-	// extra EXPIRE on a key under contention. Acceptable — EXPIRE is
-	// idempotent and this avoids a per-key mutex on the hot path.
+	// Real race lives here: under heavy contention several goroutines can
+	// each pass the post-interval check, each Store their own `now`, and
+	// each return true. That allows a small number of redundant EXPIREs on
+	// the same key in the same window. Acceptable: EXPIRE is idempotent and
+	// we avoid a per-key mutex on the hot path.
 	e.m.Store(key, now)
 	e.Refreshed.Add(1)
 	return true
 }
 
-func (e *ExpireCoalescer) sweepLoop() {
+func (e *ExpireCoalescer) sweepLoop(ctx context.Context) {
 	t := time.NewTicker(e.interval)
 	defer t.Stop()
-	for range t.C {
-		e.sweep()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			e.sweep()
+		}
 	}
 }
 
 func (e *ExpireCoalescer) sweep() {
-	count := 0
-	e.m.Range(func(_, _ any) bool {
-		count++
-		return true
-	})
-	if count < e.maxEntries {
+	if e.size.Load() < int64(e.maxEntries) {
 		return
 	}
 	cutoff := time.Now().Add(-2 * e.interval).UnixNano()
 	e.m.Range(func(k, v any) bool {
 		if v.(int64) < cutoff {
-			e.m.Delete(k)
+			if _, deleted := e.m.LoadAndDelete(k); deleted {
+				e.size.Add(-1)
+			}
 		}
 		return true
 	})
 }
 
-// Size returns the current number of cached keys. Used by metrics.
+// Size returns the current number of cached keys. O(1) via the atomic
+// counter — safe to call from a Prometheus scrape.
 func (e *ExpireCoalescer) Size() int {
-	n := 0
-	e.m.Range(func(_, _ any) bool {
-		n++
-		return true
-	})
-	return n
+	return int(e.size.Load())
 }
 
 // ExpireGate is the global coalescer used by the request handlers. Pre-
 // initialized with conservative defaults so handlers can call it without a
 // nil-check; main re-initializes with prod config on startup.
-var ExpireGate = NewExpireCoalescer(time.Hour, 1_000_000)
+var (
+	expireGateMu sync.Mutex
+	ExpireGate   = NewExpireCoalescer(time.Hour, 1_000_000)
+)
 
-// InitExpireGate wires the global coalescer. Safe to call more than once;
-// later calls replace the gate.
+// InitExpireGate replaces the global coalescer. Stops the previous gate's
+// sweeper so re-initialization doesn't leak goroutines.
 func InitExpireGate(interval time.Duration, maxEntries int) {
+	expireGateMu.Lock()
+	defer expireGateMu.Unlock()
+	if ExpireGate != nil {
+		ExpireGate.Stop()
+	}
 	ExpireGate = NewExpireCoalescer(interval, maxEntries)
 }

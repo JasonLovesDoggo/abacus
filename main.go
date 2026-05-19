@@ -339,8 +339,10 @@ func main() {
 	}
 	// Coalesce EXPIRE calls — TTL is 6 months, refreshing more than once an
 	// hour per key is wasted bandwidth. Tunable via env for the cautious.
-	gateInterval, err := time.ParseDuration(getEnv("EXPIRE_COALESCE_INTERVAL", "1h"))
+	gateIntervalRaw := getEnv("EXPIRE_COALESCE_INTERVAL", "1h")
+	gateInterval, err := time.ParseDuration(gateIntervalRaw)
 	if err != nil {
+		log.Printf("warn: EXPIRE_COALESCE_INTERVAL=%q is not a valid duration (%v); defaulting to 1h", gateIntervalRaw, err)
 		gateInterval = time.Hour
 	}
 	utils.InitExpireGate(gateInterval, 1_000_000)
