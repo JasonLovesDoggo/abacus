@@ -257,6 +257,10 @@ func CreateRouter() *gin.Engine {
 
 	r.Use(cors.New(corsConfig))
 	r.Use(gin.Recovery()) // recover from panics and returns a 500 error
+	// Prometheus must run AFTER Recovery so it sees the post-recovery 500
+	// status, and BEFORE Stats/RateLimit/handlers so it measures the full
+	// request time including those middlewares.
+	r.Use(middleware.Prometheus())
 	if os.Getenv("API_ANALYTICS_ENABLED") == "true" {
 		r.Use(analytics.Analytics(os.Getenv("API_ANALYTICS_KEY"))) // Add middleware
 		log.Println("Analytics enabled")
