@@ -222,22 +222,22 @@ func GetView(c *gin.Context) {
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
 
-	if errors.Is(err, redis.Nil) {
+	// Fetch via in-process micro-cache. singleflight collapses concurrent
+	// fills for the same key into one Redis GET. Misses, including the
+	// "key doesn't exist" case, are cached for the TTL window.
+	val, notFound, err := utils.GetCacheV.Fetch(dbKey, func() (string, bool, error) {
+		return utils.RedisGetThrough(context.Background(), Client, dbKey)
+	})
+	if notFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
 		return
-	} else if err != nil { // Other Redis errors
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
 
-	go func() {
-		if utils.ExpireGate.ShouldRefresh(dbKey) {
-			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
-		}
-	}()
 	intval, _ := strconv.Atoi(val)
 	if c.Query("callback") != "" {
 		c.JSONP(http.StatusOK, gin.H{"value": intval})
@@ -246,6 +246,13 @@ func GetView(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"value": intval})
 
 	}
+	// Fire the TTL refresh AFTER the response has been written. The coalescer
+	// suppresses ~99% of these so most cache hits incur zero Redis traffic.
+	go func() {
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
+	}()
 }
 
 func GetShieldView(c *gin.Context) {
@@ -257,22 +264,18 @@ func GetShieldView(c *gin.Context) {
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
 
-	if errors.Is(err, redis.Nil) {
+	val, notFound, err := utils.GetCacheV.Fetch(dbKey, func() (string, bool, error) {
+		return utils.RedisGetThrough(context.Background(), Client, dbKey)
+	})
+	if notFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
 		return
-	} else if err != nil { // Other Redis errors
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
-
-	go func() {
-		if utils.ExpireGate.ShouldRefresh(dbKey) {
-			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
-		}
-	}()
 
 	intval, convErr := strconv.ParseInt(val, 10, 64)
 	if convErr != nil {
@@ -287,6 +290,14 @@ func GetShieldView(c *gin.Context) {
 	}
 	c.Header("Content-Type", "image/svg+xml")
 	c.Data(http.StatusOK, "image/svg+xml", badgeSVG)
+
+	// TTL refresh AFTER the response has been written. Coalescer suppresses
+	// ~99% so most cache hits incur zero Redis traffic.
+	go func() {
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
+	}()
 }
 
 func CreateRandomView(c *gin.Context) {

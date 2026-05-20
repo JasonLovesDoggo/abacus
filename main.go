@@ -337,6 +337,22 @@ func main() {
 	}
 	utils.InitExpireGate(gateInterval, 1_000_000)
 
+	// In-process micro-cache for /get. TTL of 250ms bounds staleness to a
+	// quarter second — invisible for counter semantics — while collapsing
+	// the hot-key concurrent reads into one Redis call. TTL<=0 disables.
+	getCacheTTLRaw := getEnv("GET_CACHE_TTL", "250ms")
+	getCacheTTL, err := time.ParseDuration(getCacheTTLRaw)
+	if err != nil {
+		log.Printf("warn: GET_CACHE_TTL=%q is not a valid duration (%v); defaulting to 250ms", getCacheTTLRaw, err)
+		getCacheTTL = 250 * time.Millisecond
+	}
+	getCacheMax, _ := strconv.Atoi(getEnv("GET_CACHE_MAX_ENTRIES", "100000"))
+	if getCacheMax <= 0 {
+		getCacheMax = 100_000
+	}
+	utils.InitGetCache(getCacheTTL, getCacheMax)
+	log.Printf("GetCache: ttl=%s max=%d enabled=%t", getCacheTTL, getCacheMax, utils.GetCacheV.Enabled())
+
 	utils.InitPrometheus(ctx, getEnv("METRICS_ADDR", ":9091"), Client, RateLimitClient)
 	startPprofServer(ctx)
 
