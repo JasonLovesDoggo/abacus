@@ -92,8 +92,15 @@ func (c *GetCache) Enabled() bool { return c != nil && c.enabled }
 // concurrent callers (singleflight). fill returns (value, notFound, error).
 // notFound=true represents a cached "key doesn't exist" (redis.Nil) result.
 // Errors are NOT cached — only successful reads and explicit not-found.
+//
+// nil receiver is treated as disabled (Misses is also bumped on the
+// disabled/nil pass-through so abacus_get_cache_misses_total stays
+// meaningful as a Redis-call counter during rollback or before init).
 func (c *GetCache) Fetch(key string, fill func() (string, bool, error)) (string, bool, error) {
-	if !c.enabled {
+	if c == nil || !c.enabled {
+		if c != nil {
+			c.Misses.Add(1)
+		}
 		return fill()
 	}
 
@@ -140,10 +147,13 @@ func (c *GetCache) store(key, val string, notFound bool) {
 	c.mu.Lock()
 	_, existed := c.entries[key]
 	c.entries[key] = getCacheEntry{val, notFound, time.Now().Add(c.ttl)}
-	c.mu.Unlock()
 	if !existed {
+		// Increment under the lock so size never diverges from len(entries).
+		// sweep() decrements while holding the same lock — the two paths are
+		// totally serialized.
 		c.size.Add(1)
 	}
+	c.mu.Unlock()
 }
 
 // sweepLoop runs once per TTL window to evict expired entries when the

@@ -99,18 +99,28 @@ func TestGetCache_ConcurrentFillsCollapseToOne(t *testing.T) {
 	const N = 200
 	var wg sync.WaitGroup
 	results := make(chan string, N)
+	errs := make(chan error, N)
 	for i := 0; i < N; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			v, _, err := c.Fetch("hot", fill)
-			require.NoError(t, err)
+			// Don't call require/t.FailNow from a goroutine — collect and
+			// assert in the main test goroutine after wg.Wait().
+			if err != nil {
+				errs <- err
+				return
+			}
 			results <- v
 		}()
 	}
 	wg.Wait()
 	close(results)
+	close(errs)
 
+	for err := range errs {
+		require.NoError(t, err)
+	}
 	require.Equal(t, int64(1), calls.Load(),
 		"200 concurrent Fetch calls for one key must collapse to exactly 1 fill, got %d", calls.Load())
 	for r := range results {
@@ -132,17 +142,23 @@ func TestGetCache_DistinctKeysFillIndependently(t *testing.T) {
 
 	const N = 100
 	var wg sync.WaitGroup
+	errs := make(chan error, N)
 	for i := 0; i < N; i++ {
 		i := i
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _, err := c.Fetch("k"+strconv.Itoa(i), fill)
-			require.NoError(t, err)
+			if _, _, err := c.Fetch("k"+strconv.Itoa(i), fill); err != nil {
+				errs <- err
+			}
 		}()
 	}
 	wg.Wait()
+	close(errs)
 
+	for err := range errs {
+		require.NoError(t, err)
+	}
 	require.Equal(t, int64(N), calls.Load(),
 		"%d distinct keys should each get one fill, got %d", N, calls.Load())
 }
@@ -226,6 +242,30 @@ func TestGetCache_DisabledPassesThrough(t *testing.T) {
 	require.Equal(t, int64(5), calls.Load(), "disabled cache must call fill every time")
 	require.Equal(t, 0, c.Size())
 	require.Equal(t, uint64(0), c.Hits.Load())
+	// Misses MUST tick on disabled pass-through so abacus_get_cache_misses_total
+	// stays meaningful as a "Redis GETs going through this wrapper" counter
+	// during rollback (GET_CACHE_TTL=0) or before main() runs InitGetCache.
+	require.Equal(t, uint64(5), c.Misses.Load())
+}
+
+// Same property for the nil-receiver pass-through — Fetch must not panic
+// and must still invoke fill on every call.
+func TestGetCache_NilReceiverIsDisabled(t *testing.T) {
+	var c *GetCache // nil
+	require.False(t, c.Enabled())
+	c.Stop() // must not panic
+
+	calls := 0
+	for i := 0; i < 3; i++ {
+		v, nf, err := c.Fetch("k", func() (string, bool, error) {
+			calls++
+			return "v", false, nil
+		})
+		require.NoError(t, err)
+		require.False(t, nf)
+		require.Equal(t, "v", v)
+	}
+	require.Equal(t, 3, calls, "nil cache must pass through to fill on every call")
 }
 
 // InitGetCache replaces the global cleanly without leaking goroutines.

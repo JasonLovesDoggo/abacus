@@ -238,13 +238,6 @@ func GetView(c *gin.Context) {
 		return
 	}
 
-	// Fire the TTL refresh after the response is committed. The coalescer
-	// suppresses ~99% of these so most cache hits incur zero Redis traffic.
-	go func() {
-		if utils.ExpireGate.ShouldRefresh(dbKey) {
-			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
-		}
-	}()
 	intval, _ := strconv.Atoi(val)
 	if c.Query("callback") != "" {
 		c.JSONP(http.StatusOK, gin.H{"value": intval})
@@ -253,6 +246,13 @@ func GetView(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"value": intval})
 
 	}
+	// Fire the TTL refresh AFTER the response has been written. The coalescer
+	// suppresses ~99% of these so most cache hits incur zero Redis traffic.
+	go func() {
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
+	}()
 }
 
 func GetShieldView(c *gin.Context) {
@@ -277,12 +277,6 @@ func GetShieldView(c *gin.Context) {
 		return
 	}
 
-	go func() {
-		if utils.ExpireGate.ShouldRefresh(dbKey) {
-			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
-		}
-	}()
-
 	intval, convErr := strconv.ParseInt(val, 10, 64)
 	if convErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Invalid data format."})
@@ -296,6 +290,14 @@ func GetShieldView(c *gin.Context) {
 	}
 	c.Header("Content-Type", "image/svg+xml")
 	c.Data(http.StatusOK, "image/svg+xml", badgeSVG)
+
+	// TTL refresh AFTER the response has been written. Coalescer suppresses
+	// ~99% so most cache hits incur zero Redis traffic.
+	go func() {
+		if utils.ExpireGate.ShouldRefresh(dbKey) {
+			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
+		}
+	}()
 }
 
 func CreateRandomView(c *gin.Context) {
