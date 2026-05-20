@@ -126,6 +126,18 @@ func TestGetCache_ConcurrentFillsCollapseToOne(t *testing.T) {
 	for r := range results {
 		require.Equal(t, "shared", r, "every caller must get the same value")
 	}
+
+	// Metric accounting under coalescing: exactly one Fetch ran fill (the
+	// singleflight leader) and is recorded as a Miss. The other N-1 are
+	// coalesced waiters that got the shared result without causing a
+	// Redis call — those count as Hits. hits + misses must equal N so
+	// the hit-rate calculation stays meaningful under concurrency.
+	require.Equal(t, uint64(1), c.Misses.Load(),
+		"exactly one Miss should be recorded (the singleflight leader)")
+	require.Equal(t, uint64(N-1), c.Hits.Load(),
+		"N-1 coalesced waiters should count as Hits, got %d", c.Hits.Load())
+	require.Equal(t, uint64(N), c.Hits.Load()+c.Misses.Load(),
+		"hits+misses must equal total Fetch calls so hit-rate stays accurate")
 }
 
 // Distinct keys under concurrency must NOT collapse — each gets its own fill.
@@ -189,7 +201,11 @@ func TestGetCache_ErrorsAreNotCached(t *testing.T) {
 // Sweeper evicts only stale entries and only when above maxSize.
 func TestGetCache_SweeperBoundedAndStaleOnly(t *testing.T) {
 	c := NewGetCache(10*time.Millisecond, 5)
-	defer c.Stop()
+	// Stop the background sweeper goroutine immediately — its ticker fires
+	// at ttl=10ms and would race with our explicit sweep() calls below,
+	// making this test flaky. We're testing the sweep() function directly,
+	// not the loop that drives it.
+	c.Stop()
 
 	// Fill past the cap.
 	for i := 0; i < 10; i++ {
@@ -207,13 +223,16 @@ func TestGetCache_SweeperBoundedAndStaleOnly(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 	c.sweep()
 	require.Equal(t, 0, c.Size(), "stale entries above cap must be evicted")
-	require.Greater(t, c.Evicted.Load(), uint64(0))
+	require.Equal(t, uint64(10), c.Evicted.Load(),
+		"every stale entry above cap should be counted as evicted")
 }
 
 // Below the cap, the sweeper must do nothing — pure efficiency check.
 func TestGetCache_SweeperBelowCapNoOp(t *testing.T) {
 	c := NewGetCache(10*time.Millisecond, 1000)
-	defer c.Stop()
+	// Stop the background sweeper — same reason as above, isolates the test
+	// from the loop's timing.
+	c.Stop()
 
 	_, _, _ = c.Fetch("a", func() (string, bool, error) { return "v", false, nil })
 	_, _, _ = c.Fetch("b", func() (string, bool, error) { return "v", false, nil })

@@ -93,14 +93,23 @@ func (c *GetCache) Enabled() bool { return c != nil && c.enabled }
 // notFound=true represents a cached "key doesn't exist" (redis.Nil) result.
 // Errors are NOT cached — only successful reads and explicit not-found.
 //
-// nil receiver is treated as disabled (Misses is also bumped on the
-// disabled/nil pass-through so abacus_get_cache_misses_total stays
-// meaningful as a Redis-call counter during rollback or before init).
+// Metric accounting:
+//   - Cache hit (live entry found): Hits++.
+//   - Cache fill (singleflight leader, fill ran): Misses++.
+//   - Coalesced waiter (another goroutine ran fill, we got the shared
+//     result): Hits++. Semantically a hit — we didn't cause a Redis call.
+//   - Disabled pass-through (ttl<=0): Misses++ so misses_total stays
+//     meaningful as "Redis GETs going through this wrapper" during a
+//     GET_CACHE_TTL=0 rollback.
+//   - nil receiver: pure pass-through, no metric increments (there's no
+//     instance to record on; this path is for pre-Init or post-Stop
+//     safety, not for production observability).
 func (c *GetCache) Fetch(key string, fill func() (string, bool, error)) (string, bool, error) {
-	if c == nil || !c.enabled {
-		if c != nil {
-			c.Misses.Add(1)
-		}
+	if c == nil {
+		return fill()
+	}
+	if !c.enabled {
+		c.Misses.Add(1)
 		return fill()
 	}
 
@@ -110,6 +119,11 @@ func (c *GetCache) Fetch(key string, fill func() (string, bool, error)) (string,
 	}
 
 	// Coalesce concurrent fills for the same key into ONE call.
+	// ranFill is set by the leader inside the closure. Waiters never
+	// enter the closure (singleflight returns the leader's result), so
+	// their ranFill stays false — that's how we distinguish "I did the
+	// Redis call" from "I got the shared result of someone else's call."
+	ranFill := false
 	res, err, _ := c.sf.Do(key, func() (any, error) {
 		// Re-check under singleflight: another caller may have filled
 		// between our lookup miss and entry into Do.
@@ -117,6 +131,7 @@ func (c *GetCache) Fetch(key string, fill func() (string, bool, error)) (string,
 			c.Hits.Add(1)
 			return getFillResult{v, nf}, nil
 		}
+		ranFill = true
 		c.Misses.Add(1)
 		v, nf, e := fill()
 		if e != nil {
@@ -127,6 +142,12 @@ func (c *GetCache) Fetch(key string, fill func() (string, bool, error)) (string,
 	})
 	if err != nil {
 		return "", false, err
+	}
+	if !ranFill {
+		// We weren't the leader — the fn body ran in a sibling goroutine
+		// and we received its shared result. No Redis call attributable
+		// to us, so count this as a hit for hit-rate purposes.
+		c.Hits.Add(1)
 	}
 	r := res.(getFillResult)
 	return r.val, r.notFound, nil
