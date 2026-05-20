@@ -148,6 +148,45 @@ func InitPrometheus(ctx context.Context, addr string, main, rl *redis.Client) {
 			return float64(ExpireGate.Skipped.Load())
 		},
 	))
+	// GetCache visibility. Hits/(Hits+Misses) is the cache-hit rate;
+	// rate(misses_total) is the Redis-side load this cache is generating.
+	Prom.registry.MustRegister(prometheus.NewCounterFunc(
+		prometheus.CounterOpts{Name: "abacus_get_cache_hits_total", Help: "GetCache hits, including cached not-found (cumulative)."},
+		func() float64 {
+			if GetCacheV == nil {
+				return 0
+			}
+			return float64(GetCacheV.Hits.Load())
+		},
+	))
+	Prom.registry.MustRegister(prometheus.NewCounterFunc(
+		prometheus.CounterOpts{Name: "abacus_get_cache_misses_total", Help: "GetCache misses (cache fills) actually sent to Redis (cumulative)."},
+		func() float64 {
+			if GetCacheV == nil {
+				return 0
+			}
+			return float64(GetCacheV.Misses.Load())
+		},
+	))
+	Prom.registry.MustRegister(prometheus.NewCounterFunc(
+		prometheus.CounterOpts{Name: "abacus_get_cache_evicted_total", Help: "GetCache entries evicted by the sweeper (cumulative)."},
+		func() float64 {
+			if GetCacheV == nil {
+				return 0
+			}
+			return float64(GetCacheV.Evicted.Load())
+		},
+	))
+	Prom.registry.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{Name: "abacus_get_cache_size", Help: "GetCache current entry count."},
+		func() float64 {
+			if GetCacheV == nil {
+				return 0
+			}
+			return float64(GetCacheV.Size())
+		},
+	))
+
 	Prom.registry.MustRegister(prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{Name: "abacus_expire_cache_size", Help: "Number of keys currently tracked by the EXPIRE coalescer."},
 		func() float64 {

@@ -222,17 +222,24 @@ func GetView(c *gin.Context) {
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
 
-	if errors.Is(err, redis.Nil) {
+	// Fetch via in-process micro-cache. singleflight collapses concurrent
+	// fills for the same key into one Redis GET. Misses, including the
+	// "key doesn't exist" case, are cached for the TTL window.
+	val, notFound, err := utils.GetCacheV.Fetch(dbKey, func() (string, bool, error) {
+		return utils.RedisGetThrough(context.Background(), Client, dbKey)
+	})
+	if notFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
 		return
-	} else if err != nil { // Other Redis errors
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
 
+	// Fire the TTL refresh after the response is committed. The coalescer
+	// suppresses ~99% of these so most cache hits incur zero Redis traffic.
 	go func() {
 		if utils.ExpireGate.ShouldRefresh(dbKey) {
 			Client.Expire(context.Background(), dbKey, utils.BaseTTLPeriod)
@@ -257,13 +264,15 @@ func GetShieldView(c *gin.Context) {
 	if dbKey == "" { // error is handled in CreateKey
 		return
 	}
-	// Get data from Redis
-	val, err := Client.Get(context.Background(), dbKey).Result()
 
-	if errors.Is(err, redis.Nil) {
+	val, notFound, err := utils.GetCacheV.Fetch(dbKey, func() (string, bool, error) {
+		return utils.RedisGetThrough(context.Background(), Client, dbKey)
+	})
+	if notFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
 		return
-	} else if err != nil { // Other Redis errors
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get data. Try again later."})
 		return
 	}
