@@ -1,0 +1,268 @@
+{
+  "annotations": { "list": [{ "builtIn": 1, "datasource": { "type": "grafana", "uid": "-- Grafana --" }, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" }] },
+  "description": "Abacus — request, Redis, pool, EXPIRE-gate, SSE, and Go-runtime visibility. Top row is the 'is something on fire' panel; lower rows are the drill-downs.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    { "type": "row", "id": 100, "title": "🔥 At-a-glance — read these first", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": [] },
+
+    { "type": "stat", "id": 1, "title": "RPS (global)",
+      "description": "Sum across instances of all HTTP requests. Excludes /healthcheck and /metrics. If this jumps suddenly, check the per-route rate panel below to see which endpoint is being hit.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 300 }] } } },
+      "targets": [{ "expr": "sum(rate(abacus_http_request_duration_seconds_count[$__rate_interval]))", "legendFormat": "rps", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "stat", "id": 2, "title": "p99 HTTP (global)",
+      "description": "p99 of end-to-end request latency. If pinned at 30s, you've hit the histogram bucket ceiling — actual latency is unbounded.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.05 }, { "color": "red", "value": 0.5 }] } } },
+      "targets": [{ "expr": "histogram_quantile(0.99, sum by (le) (rate(abacus_http_request_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p99", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "stat", "id": 3, "title": "Pool timeouts (5m rate)",
+      "description": "Rate of pool exhaustion across both Redis pools. Must be 0 in healthy state. Non-zero = pool is too small OR Redis is slow enough that conns aren't returning.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "ops", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.001 }] } } },
+      "targets": [{ "expr": "sum(rate(abacus_redis_pool_timeouts[$__rate_interval]))", "legendFormat": "timeout/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "stat", "id": 4, "title": "Goroutines (sum)",
+      "description": "Total live goroutines across all instances. Healthy idle ~50, healthy busy ~few hundred. Climbing past 1k = backpressure cascade in progress.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 1500 }] } } },
+      "targets": [{ "expr": "sum(go_goroutines)", "legendFormat": "goroutines", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "stat", "id": 5, "title": "5xx rate",
+      "description": "5xx responses per second across all instances. Should be 0 in healthy state. Non-zero with Redis spike = handlers timing out on Redis.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "ops", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.01 }] } } },
+      "targets": [{ "expr": "sum(rate(abacus_http_request_duration_seconds_count{status=\"5xx\"}[$__rate_interval]))", "legendFormat": "5xx/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "stat", "id": 6, "title": "EXPIRE gate skip ratio",
+      "description": "Fraction of EXPIRE calls suppressed by the coalescer. Should sit above 0.95 when warm. Low = gate isn't helping (interval may be too short or traffic too distributed across keys).",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "green", "value": 0.9 }] } } },
+      "targets": [{ "expr": "rate(abacus_expire_skipped_total[$__rate_interval]) / (rate(abacus_expire_skipped_total[$__rate_interval]) + rate(abacus_expire_refreshed_total[$__rate_interval]))", "legendFormat": "skip ratio", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+
+    { "type": "row", "id": 101, "title": "HTTP — per endpoint", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "collapsed": false, "panels": [] },
+
+    { "type": "timeseries", "id": 10, "title": "p99 per route",
+      "description": "Per-endpoint p99 latency from the abacus_http_request_duration_seconds histogram. Route label is the gin template (e.g. /hit/:namespace/:key), not raw URL.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } } },
+      "targets": [{ "expr": "histogram_quantile(0.99, sum by (route, le) (rate(abacus_http_request_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "{{route}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 11, "title": "p95 per route",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } } },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (route, le) (rate(abacus_http_request_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "{{route}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 12, "title": "p50 per route (median)",
+      "description": "The healthy-traffic floor. If this is climbing along with p99, the whole distribution is shifting — usually means Redis is uniformly slow, not just a few outliers.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } } },
+      "targets": [{ "expr": "histogram_quantile(0.50, sum by (route, le) (rate(abacus_http_request_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "{{route}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 13, "title": "Request rate per route",
+      "description": "Stacked. Tells you which endpoint is taking the volume — if RPS jumps but only /hit climbed, you're being scraped.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "mean"] } },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 30, "stacking": { "mode": "normal" } } } },
+      "targets": [{ "expr": "sum by (route) (rate(abacus_http_request_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{route}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 14, "title": "Status class breakdown",
+      "description": "2xx / 3xx / 4xx / 5xx requests/sec. 4xx climbing = rate-limit (429s) kicking in or bad clients. 5xx climbing = your handlers failing.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] } },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 20, "stacking": { "mode": "normal" } } } },
+      "targets": [{ "expr": "sum by (status) (rate(abacus_http_request_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{status}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 15, "title": "Error rate as % of traffic, per route",
+      "description": "(4xx + 5xx) / total per endpoint. Useful for catching one bad endpoint among many healthy ones.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [{ "expr": "sum by (route) (rate(abacus_http_request_duration_seconds_count{status=~\"4xx|5xx\"}[$__rate_interval])) / sum by (route) (rate(abacus_http_request_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{route}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+
+    { "type": "row", "id": 102, "title": "Redis — per command", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 }, "collapsed": false, "panels": [] },
+
+    { "type": "timeseries", "id": 20, "title": "p50 / p95 / p99 per Redis cmd",
+      "description": "Compare against the HTTP p99 above. If Redis p99 is fine but HTTP p99 is bad, the slowness is in handler/middleware. If both are bad, it's Redis or the network to it.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 10, "w": 16, "x": 0, "y": 32 },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum by (cmd, le) (rate(abacus_redis_cmd_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p99 {{cmd}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "histogram_quantile(0.95, sum by (cmd, le) (rate(abacus_redis_cmd_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p95 {{cmd}}", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "histogram_quantile(0.50, sum by (cmd, le) (rate(abacus_redis_cmd_duration_seconds_bucket[$__rate_interval])))", "legendFormat": "p50 {{cmd}}", "refId": "C", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+    { "type": "bargauge", "id": 21, "title": "Redis cmd avg latency (last window)",
+      "description": "Quick sanity check via sum/count. Doesn't replace the quantiles above but useful at a glance.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 32 },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 4, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.002 }, { "color": "red", "value": 0.01 }] } } },
+      "targets": [{ "expr": "sum by (cmd) (rate(abacus_redis_cmd_duration_seconds_sum[$__rate_interval])) / sum by (cmd) (rate(abacus_redis_cmd_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{cmd}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 22, "title": "Redis cmd rate (calls/s by cmd)",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 42 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] } },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 20, "stacking": { "mode": "normal" } } } },
+      "targets": [{ "expr": "sum by (cmd) (rate(abacus_redis_cmd_duration_seconds_count[$__rate_interval]))", "legendFormat": "{{cmd}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 23, "title": "Redis errors/sec (excludes Nil)",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 42 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 30 }, "color": { "mode": "fixed", "fixedColor": "red" } } },
+      "targets": [{ "expr": "sum by (pool, cmd) (rate(abacus_redis_cmd_errors_total[$__rate_interval]))", "legendFormat": "{{pool}} {{cmd}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+
+    { "type": "row", "id": 103, "title": "Redis — connection pool", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 51 }, "collapsed": false, "panels": [] },
+
+    { "type": "timeseries", "id": 30, "title": "Pool timeout rate (the cascade indicator)",
+      "description": "Non-zero here is THE leading indicator of the brownout cascade. Every timeout is a request that waited 1.2s for a conn and got nothing. Per pool.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 30 }, "color": { "mode": "fixed", "fixedColor": "red" } } },
+      "targets": [{ "expr": "sum by (pool) (rate(abacus_redis_pool_timeouts[$__rate_interval]))", "legendFormat": "{{pool}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 31, "title": "Pool conns: total vs idle (per pool, cluster sum)",
+      "description": "When idle drops to 0 you're saturated. If total is below 100 (the configured PoolSize) you have headroom; if total = PoolSize and idle = 0, you're maxed.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum by (pool) (abacus_redis_pool_total_conns)", "legendFormat": "{{pool}} total", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "sum by (pool) (abacus_redis_pool_idle_conns)", "legendFormat": "{{pool}} idle", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+
+    { "type": "row", "id": 104, "title": "EXPIRE coalescer", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 }, "collapsed": false, "panels": [] },
+
+    { "type": "timeseries", "id": 40, "title": "Refreshed vs skipped (calls/s)",
+      "description": "Refreshed = EXPIREs actually sent. Skipped = suppressed by the gate. The ratio in the at-a-glance stat above tells the story; this shows the absolute volume.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 61 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 20 } } },
+      "targets": [
+        { "expr": "sum(rate(abacus_expire_refreshed_total[$__rate_interval]))", "legendFormat": "refreshed/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "sum(rate(abacus_expire_skipped_total[$__rate_interval]))", "legendFormat": "skipped/s", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+    { "type": "timeseries", "id": 41, "title": "Cache size (tracked keys, per instance)",
+      "description": "Bounded by maxEntries=1M. If growing without bound, the sweeper isn't keeping up.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 61 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [{ "expr": "abacus_expire_cache_size", "legendFormat": "{{instance}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+
+    { "type": "row", "id": 105, "title": "SSE", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 69 }, "collapsed": true, "panels": [] },
+
+    { "type": "timeseries", "id": 50, "title": "SSE clients, keys, queue depth",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 70 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum(abacus_sse_clients_total)", "legendFormat": "clients", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "sum(abacus_sse_keys_tracked)", "legendFormat": "keys", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "sum(abacus_sse_message_queue_depth)", "legendFormat": "queue depth", "refId": "C", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+    { "type": "timeseries", "id": 51, "title": "SSE drops/sec",
+      "description": "Non-zero = slow consumers being evicted or fan-out overflowing. Investigate the SSE listener if either is sustained.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 70 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 20 }, "color": { "mode": "fixed", "fixedColor": "red" } } },
+      "targets": [
+        { "expr": "rate(abacus_sse_client_drops_total[$__rate_interval])", "legendFormat": "client drops/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "rate(abacus_sse_message_drops_total[$__rate_interval])", "legendFormat": "message drops/s", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+
+    { "type": "row", "id": 106, "title": "Go runtime — per instance", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 78 }, "collapsed": false, "panels": [] },
+
+    { "type": "timeseries", "id": 60, "title": "Goroutines per instance (THE cascade signal)",
+      "description": "When this climbs above ~500 per instance, requests are piling up waiting on Redis. Track which instance(s) are spiking — sometimes only one machine is stuck.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 79 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 1500 }] }, "custom.thresholdsStyle": { "mode": "line" } } },
+      "targets": [{ "expr": "go_goroutines", "legendFormat": "{{instance}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] },
+
+    { "type": "timeseries", "id": 61, "title": "Heap inuse / RSS per instance",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 79 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "go_memstats_heap_inuse_bytes", "legendFormat": "{{instance}} heap", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "process_resident_memory_bytes", "legendFormat": "{{instance}} RSS", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+    { "type": "timeseries", "id": 62, "title": "GC pause per instance",
+      "description": "Long GC pauses inflate p99 directly. p75/max per instance from Go's own quantile estimator.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 88 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 4, "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "go_gc_duration_seconds{quantile=\"0.75\"}", "legendFormat": "{{instance}} p75", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } },
+        { "expr": "go_gc_duration_seconds{quantile=\"1\"}", "legendFormat": "{{instance}} max", "refId": "B", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }
+      ] },
+
+    { "type": "timeseries", "id": 63, "title": "CPU seconds rate per instance",
+      "description": "rate(process_cpu_seconds_total) ≈ CPU cores busy. With 2 vCPUs this can reach ~2.0 at full utilization.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 88 },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [{ "expr": "rate(process_cpu_seconds_total[$__rate_interval])", "legendFormat": "{{instance}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" } }] }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["abacus", "fly", "performance"],
+  "templating": { "list": [{ "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" }, "hide": 0, "includeAll": false, "label": "Datasource", "multi": false, "name": "DS_PROMETHEUS", "options": [], "query": "prometheus", "queryValue": "", "refresh": 1, "regex": "", "skipUrlSync": false, "type": "datasource" }] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "1h"] },
+  "timezone": "browser",
+  "title": "Abacus — Full",
+  "uid": "abacus-full",
+  "version": 1,
+  "weekStart": ""
+}
