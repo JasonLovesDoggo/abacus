@@ -1,6 +1,8 @@
 package badge
 
 import (
+	"encoding/xml"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -302,7 +304,7 @@ func TestSimpleStyles(t *testing.T) {
 
 				// Verify text content is included
 				svgString := string(svg)
-				if !strings.Contains(svgString, text) {
+				if !svgTextValues(t, svg)[text] {
 					t.Errorf("Text content '%s' missing in %s badge", text, style)
 				}
 
@@ -443,6 +445,102 @@ func TestColorErrorMessages(t *testing.T) {
 		// Check that the error message includes the invalid color
 		if !strings.Contains(err.Error(), "'xyz'") {
 			t.Errorf("Error message doesn't mention the invalid color: %v", err)
+		}
+	}
+}
+
+func TestGenerateEscapesBadgeText(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	generator, err := NewGenerator(filepath.Join(wd, "testdata", "Verdana.ttf"), 11)
+	if err != nil {
+		t.Fatalf("Failed to create generator: %v", err)
+	}
+
+	const (
+		leftText   = `</text><script id="left">left</script><text>`
+		rightText  = `</text><script id="right">right</script><text>`
+		fontFamily = `sans-serif"><script id="font">font</script><g font-family="`
+	)
+
+	styles := []string{
+		"flat",
+		"flat-square",
+		"plastic",
+		"flat-simple",
+		"flat-square-simple",
+		"plastic-simple",
+	}
+
+	for _, style := range styles {
+		t.Run(style, func(t *testing.T) {
+			params := Params{
+				LeftText:   leftText,
+				RightText:  rightText,
+				Color:      "#007ec6",
+				TextColor:  "#fff",
+				FontSize:   11,
+				FontFamily: fontFamily,
+			}
+			if IsSimpleStyle(style) {
+				params.LeftText = ""
+			}
+
+			svg, err := generator.Generate(params, style)
+			if err != nil {
+				t.Fatalf("Failed to generate %s badge: %v", style, err)
+			}
+
+			textValues := svgTextValues(t, svg)
+
+			if !IsSimpleStyle(style) && !textValues[leftText] {
+				t.Errorf("Left text was not rendered literally: %s", svg)
+			}
+			if !textValues[rightText] {
+				t.Errorf("Right text was not rendered literally: %s", svg)
+			}
+		})
+	}
+}
+
+func svgTextValues(t *testing.T, svg []byte) map[string]bool {
+	t.Helper()
+
+	values := make(map[string]bool)
+	decoder := xml.NewDecoder(strings.NewReader(string(svg)))
+	var value strings.Builder
+	inText := false
+
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			return values
+		}
+		if err != nil {
+			t.Fatalf("Generated badge is invalid XML: %v", err)
+		}
+
+		switch token := token.(type) {
+		case xml.StartElement:
+			if token.Name.Local == "script" {
+				t.Fatal("Generated badge contains an injected script element")
+			}
+			if token.Name.Local == "text" {
+				inText = true
+				value.Reset()
+			}
+		case xml.CharData:
+			if inText {
+				value.Write(token)
+			}
+		case xml.EndElement:
+			if token.Name.Local == "text" {
+				values[value.String()] = true
+				inText = false
+			}
 		}
 	}
 }
