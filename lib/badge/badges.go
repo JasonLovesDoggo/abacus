@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
